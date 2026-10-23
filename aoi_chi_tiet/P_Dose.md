@@ -1,292 +1,290 @@
 # CHI TIẾT TOÀN BỘ BIẾN, CÁCH SỬ DỤNG & CẤU HÌNH KHỐI `P_Dose`
-**Thuộc chương:** Chương 2: Điều khiển Điều tiết & Quy trình (Regulatory & Procedural Control)  
-**Nguồn dữ liệu gốc:** Bảng thông số kỹ thuật `Regulatory_Procedural Control 4.1.xlsx` đính kèm trong `PROCES-RM013I-EN-P`  
+**Thuộc chương:** [Chương 2: Điều khiển Điều tiết & Quy trình (Regulatory & Procedural Control)](../02_CHUONG_2_REGULATORY_PROCEDURAL_CONTROL.md)  
+**Nguồn dữ liệu gốc:** Bảng thông số kỹ thuật `Regulatory_Procedural Control 4.1.xlsx` đính kèm trong ấn phẩm `PROCES-RM013I-EN-P` (Trang 99–106)  
+**Tệp định nghĩa khối lệnh:** `P_DoseFM / P_DoseWS`  
 **Thống kê số lượng biến của `P_Dose`:** **117** Biến đầu vào (`Input Parameters`) | **95** Biến đầu ra (`Output Parameters`) | **41** Biến cấu hình cục bộ (`Local Configuration Tags`)
 
-> **⚡ Truy cập nhanh:** [⬅ Quay lại `README.md` (Thư mục gốc)](../README.md) | [⬅ Danh mục Tra cứu Nhanh (`00_GIOI_THIEU_VA_TRA_CUU_NHANH_AOI.md`)](./00_GIOI_THIEU_VA_TRA_CUU_NHANH_AOI.md)
+## 1. Tổng quan Chức năng & Hướng dẫn Tích hợp Khối `P_Dose` trong Studio 5000
+- **Chức năng cốt lõi:** Khối **Định lượng chiết rót chính xác (Dosing / Batch Weighing)** gồm 2 biến thể: dùng đồng hồ lưu lượng (`P_DoseFM`) hoặc dùng cân Loadcell (`P_DoseWS`). Điều khiển van nạp 2 cấp (**Nạp nhanh Bulk + Nạp tinh Dribble**), tự động đóng sớm để **bù lượng nguyên liệu còn đang rơi trên đường ống (`Pre-Act / Slop`)** và kiểm tra rò rỉ van.
+- **Khi nào CẦN sử dụng:** Khi cần **nạp chính xác một lượng Kg hoặc Lít hóa chất, nước, dầu ăn, hương liệu, phụ gia vào bồn trộn** mà không cần viết logic cắt sớm phức tạp.
+- **Khi nào KHÔNG sử dụng (Khối thay thế):** Khi chỉ cần đọc lưu lượng cộng dồn liên tục không điều khiển đóng/mở van nạp mẻ.
 
-## 0. Giới thiệu chung & Các nhu cầu cần dùng khối `P_Dose`
-- **Tệp định nghĩa khối lệnh (`.L5X`):** `P_DoseFM_4.10.00_AOI.L5X` (Flowmeter) / `P_DoseWS_4.10.00_AOI.L5X` (Weigh Scale) *(Trang 99–106 trong tài liệu gốc PROCES-RM013I-EN-P)*
-- **Giới thiệu chung chức năng:** Khối **Định lượng chiết rót chính xác (Dosing / Batch Weighing)** gồm 2 biến thể: dùng đồng hồ lưu lượng (`P_DoseFM`) hoặc dùng cân Loadcell (`P_DoseWS`). Điều khiển van nạp 2 cấp (**Nạp nhanh Bulk + Nạp tinh Dribble**), tự động đóng sớm để **bù lượng nguyên liệu còn đang rơi trên đường ống (`Pre-Act / Slop`)** và kiểm tra rò rỉ van.
-- **Các nhu cầu thực tế CẦN dùng khối `P_Dose`:** Khi cần **nạp chính xác một lượng Kg hoặc Lít hóa chất, nước, dầu ăn, hương liệu, phụ gia vào bồn trộn** mà không cần viết logic cắt sớm phức tạp.
-- **Trường hợp KHÔNG dùng & Khối thay thế:** Khi chỉ cần đọc lưu lượng cộng dồn liên tục không điều khiển đóng/mở van nạp mẻ.
-
-## 1. Hướng dẫn Cách sử dụng, Đấu nối chân & Cấu hình các biến trong `P_Dose`
+### Quy trình 4 bước đấu nối và cấu hình `P_Dose`:
 1. **Các chân đầu vào cần nối dây tín hiệu (`Inp_*` / Chân hiển thị trên khối FBD/Ladder):**
-   - Các biến tiêu biểu: `Inp_RatePV`, `Inp_QtyPV`, `Inp_RatePVSrcQ`, `Inp_QtyPVSrcQ`, `Inp_RatePVNotify`, `Inp_QtyPVNotify`, `Inp_RunFdbk`, `Inp_DribbleFdbk`, `Inp_StopFdbk`, `Inp_CtrldEqpFault`, `Inp_RatePVBad`, `Inp_RatePVUncertain`, `Inp_QtyPVBad`, `Inp_QtyPVUncertain`, `Inp_Sim`, `Inp_ExtInh`, `Inp_Reset`
-   - **Cách đấu nối:** Nối trực tiếp từ thẻ I/O vật lý (ví dụ `Local:1:I.Ch0Data`, `Local:2:I.Data.0`) hoặc từ ngõ ra trạng thái của các khối liên kết (`P_Intlk.Sts_IntlkOK`, `P_Perm.Sts_PermOK`, `P_AIChan.SrcQ`).
+   - **Các biến đầu vào tiêu biểu:** `Inp_RatePV`, `Inp_QtyPV`, `Inp_RatePVSrcQ`, `Inp_QtyPVSrcQ`, `Inp_RatePVNotify`, `Inp_QtyPVNotify`, `Inp_RunFdbk`, `Inp_DribbleFdbk`, `Inp_StopFdbk`, `Inp_CtrldEqpFault`, `Inp_RatePVBad`, `Inp_RatePVUncertain`, `Inp_QtyPVBad`, `Inp_QtyPVUncertain`, `Inp_Sim`
+   - **Cách đấu nối:** Nối trực tiếp các chân `Inp_*` với thẻ I/O vật lý hoặc các cờ trạng thái từ khối liên kết (`P_Intlk.Sts_IntlkOK`, `P_Perm.Sts_PermOK`, `P_AIChan.SrcQ`). Khi chạy thử nghiệm phần mềm không có phần cứng thật, đặt `Inp_Sim = 1` để kích hoạt chế độ mô phỏng nội bộ.
 2. **Cách cấu hình các biến thiết lập (`Cfg_*` và `Local Configuration Tags`):**
-   - Các biến `Cfg_*` trong Input Parameters: `Cfg_LossInQty`, `Cfg_HasDribble`, `Cfg_HasEqpFdbk`, `Cfg_UseEqpFdbk`, `Cfg_AutoAdjPreact`, `Cfg_ShedOnEqpFault`, `Cfg_CalcRate`, `Cfg_CalcQty`, `Cfg_HasChanObjRate`, `Cfg_HasChanObjQty`, `Cfg_SetTrack`, `Cfg_QtyDecPlcs`, `Cfg_RateDecPlcs`, `Cfg_HasMoreObj`, `Cfg_HasOverTolAlm`, `Cfg_HasUnderTolAlm`, `Cfg_HasZeroFaultAlm`, `Cfg_HasEqpFaultAlm`...
-   - Các biến `Cfg_*` trong Local Tags (hiển thị HMI): `Cfg_Area`, `Cfg_Desc`, `Cfg_Label`, `Cfg_QtyEU`, `Cfg_RateEU`, `Cfg_Tag`
-   - **Cách cấu hình:** Trong phần mềm **Studio 5000 Logix Designer**, nhấp chuột phải vào thẻ khối lệnh -> chọn **Monitor Tags** (hoặc mở tab **Engineering / Maintenance** trên cửa sổ HMI Faceplate khi đang chạy Online) để nhập giá trị dải đo, giới hạn cảnh báo, thời gian trễ và bật các tính năng phần cứng (`Cfg_Has* = 1`, `Cfg_Use* = 1`). Lưu ý kiểm tra cờ `Sts_Err = 0` sau khi cấu hình để đảm bảo không có thông số nào bị nhập sai.
+   - **Biến `Cfg_*` trong Input Parameters:** `Cfg_LossInQty`, `Cfg_HasDribble`, `Cfg_HasEqpFdbk`, `Cfg_UseEqpFdbk`, `Cfg_AutoAdjPreact`, `Cfg_ShedOnEqpFault`, `Cfg_CalcRate`, `Cfg_CalcQty`, `Cfg_HasChanObjRate`, `Cfg_HasChanObjQty`, `Cfg_SetTrack`, `Cfg_QtyDecPlcs`, `Cfg_RateDecPlcs`, `Cfg_HasMoreObj`, `Cfg_HasOverTolAlm`, `Cfg_HasUnderTolAlm`, `Cfg_HasZeroFaultAlm`, `Cfg_HasEqpFaultAlm`...
+   - **Biến `Cfg_*` trong Local Tags (hiển thị HMI):** `Cfg_Area`, `Cfg_Desc`, `Cfg_Label`, `Cfg_QtyEU`, `Cfg_RateEU`, `Cfg_Tag`
+   - **Cách cấu hình:** Trong phần mềm **Studio 5000 Logix Designer**, nhấp chuột phải vào thẻ khối `P_Dose` -> chọn **Monitor Tags** (hoặc mở tab **Engineering / Maintenance** trên HMI Faceplate khi đang chạy Online) để cài đặt dải đo, giới hạn cảnh báo, thời gian trễ và bật các tính năng phần cứng (`Cfg_Has* = 1`, `Cfg_Use* = 1`). Sau khi cấu hình, luôn kiểm tra cờ `Sts_Err = 0` để chắc chắn không có thông số nào cài đặt sai phạm vi.
 3. **Cách điều khiển khối `P_Dose` từ Chương trình tự động (`PCmd_*` và `PSet_*`):**
-   - Các biến lệnh & giá trị đặt Program: `PSet_SP`, `PSet_DribbleQty`, `PSet_Preact`, `PSet_TolHi`, `PSet_TolLo`, `PSet_Owner`, `PCmd_ClearTot`, `PCmd_StartTot`, `PCmd_StopTot`, `PCmd_StartFlow`, `PCmd_StopFlow`, `PCmd_CheckTol`, `PCmd_Bump`, `PCmd_Prog`, `PCmd_Oper`, `PCmd_Lock`, `PCmd_Unlock`, `PCmd_Normal`...
-   - **Cách sử dụng trong code PLC:** Trước khi gửi lệnh tự động, kiểm tra khối đang ở chế độ **Program** (`Sts_Prog = 1` hoặc `Sts_Available = 1`). Nếu đang ở chế độ Operator, kích xung `PCmd_Prog = 1` (hoặc `PCmd_Acq = 1`) để chuyển sang Program, sau đó gán giá trị vào `PSet_*` và kích bit `PCmd_* = 1` (khối sẽ tự xóa bit `PCmd_*` về 0 sau khi nhận lệnh).
+   - **Các biến lệnh & giá trị đặt Program:** `PSet_SP`, `PSet_DribbleQty`, `PSet_Preact`, `PSet_TolHi`, `PSet_TolLo`, `PSet_Owner`, `PCmd_ClearTot`, `PCmd_StartTot`, `PCmd_StopTot`, `PCmd_StartFlow`, `PCmd_StopFlow`, `PCmd_CheckTol`, `PCmd_Bump`, `PCmd_Prog`, `PCmd_Oper`, `PCmd_Lock`, `PCmd_Unlock`, `PCmd_Normal`...
+   - **Cách sử dụng trong code PLC:** Trước khi gửi lệnh điều khiển tự động, kiểm tra khối đã sẵn sàng ở chế độ **Program** (`Sts_Prog = 1` hoặc `Sts_Available = 1`). Nếu đang ở chế độ Operator, kích xung `PCmd_Prog = 1` (hoặc `PCmd_Acq = 1`) để chuyển quyền về Program, sau đó gán giá trị vào `PSet_*` và kích xung `PCmd_* = 1` (khối sẽ tự động xóa bit `PCmd_*` về 0 sau khi thực thi).
 4. **Cách đọc Giá trị, Trạng thái và Cảnh báo (`Out_*`, `Val_*`, `Sts_*`, `Alm_*`):**
-   - Các biến đầu ra tiêu biểu: `Out_RunFlow`, `Out_DribbleFlow`, `Out_StopFlow`, `Out_RunTot`, `Out_ClearTot`, `Val_Qty`, `Val_Rate`, `Val_Remain`, `Val_PctComplete`, `Val_SP`, `Val_DribbleQty`, `Val_Preact`, `Val_TolHi`, `Val_TolLo`, `Val_Cmd`, `Val_Fdbk`, `Val_Sts`, `Val_Fault`...
-   - **Cách sử dụng:** Nối chân `Out_*` ra thẻ Output vật lý. Sử dụng các bit `Sts_*` (trạng thái thực tế) để đưa vào khối liên động `P_Intlk` / `P_Perm` hoặc điều kiện chuyển bước `P_Seq`. Sử dụng các bit `Alm_*` để kích hoạt còi/đèn báo động.
+   - **Các biến đầu ra tiêu biểu:** `Out_RunFlow`, `Out_DribbleFlow`, `Out_StopFlow`, `Out_RunTot`, `Out_ClearTot`, `Val_Qty`, `Val_Rate`, `Val_Remain`, `Val_PctComplete`, `Val_SP`, `Val_DribbleQty`, `Val_Preact`, `Val_TolHi`, `Val_TolLo`, `Val_Cmd`, `Val_Fdbk`, `Val_Sts`, `Val_Fault`...
+   - **Cách sử dụng:** Nối các chân `Out_*` ra thẻ Output vật lý hoặc khối chức năng phía sau. Sử dụng các cờ trạng thái thực tế `Sts_*` (như `Sts_Running`, `Sts_Opened`, `Sts_IntlkOK`, `Sts_HiHiCmp`...) để đưa vào khối liên động `P_Intlk` / `P_Perm` hoặc điều kiện chuyển bước `P_Seq`. Sử dụng các cờ `Alm_*` và `Val_Notify` để cảnh báo trên HMI hoặc kích hoạt còi/đèn báo động.
 
 ## 2. Bảng chi tiết 117 Biến Đầu Vào (`Input Parameters`) của `P_Dose`
 | Tên biến (Input Parameter) | Kiểu dữ liệu | Mặc định | Hiển thị chân | Giải thích chức năng, Cách sử dụng & Cấu hình chi tiết |
 | :--- | :--- | :--- | :--- | :--- |
-| **`EnableIn`** | `BOOL` | `1` | Ẩn (Tag) | [Chân kích hoạt Rung] Chân cho phép thực thi khối AOI: Trong Ladder (LD), nếu nhánh Rung = True thì chạy chương trình chính (Logic routine), nếu Rung = False thì chạy chương trình xử lý khi ngắt (EnableInFalse routine). Trong FBD, nếu bằng 1 hoặc không nối dây thì khối hoạt động bình thường. |
-| **`Inp_RatePV`** | `REAL` | `0` | Hiện (Pin) | [Đầu vào nối dây I/O hoặc Logic] Flow Rate from Flowmeter (EU/time, see Cfg_RateTime) |
-| **`Inp_QtyPV`** | `REAL` | `0` | Hiện (Pin) | [Đầu vào nối dây I/O hoặc Logic] Quantity from Weigh Scale or Flowmeter (EU or Pulse Count) |
-| **`Inp_RatePVSrcQ`** | `DINT` | `0` | Ẩn (Tag) | [Đầu vào nối dây I/O hoặc Logic] Flow Rate signal source and quality (enum) |
-| **`Inp_QtyPVSrcQ`** | `DINT` | `0` | Ẩn (Tag) | [Đầu vào nối dây I/O hoặc Logic] Quantity signal source and quality (enum) |
-| **`Inp_RatePVNotify`** | `DINT` | `0` | Ẩn (Tag) | [Đầu vào nối dây I/O hoặc Logic] Rate PV object alarm prio and ack status (enum) |
-| **`Inp_QtyPVNotify`** | `DINT` | `0` | Ẩn (Tag) | [Đầu vào nối dây I/O hoặc Logic] Quantity PV object alarm prio and ack status (enum) |
-| **`Inp_RunFdbk`** | `BOOL` | `0` | Ẩn (Tag) | [Đầu vào nối dây I/O hoặc Logic] 1=Controlled Equipment is Delivering (Running) |
-| **`Inp_DribbleFdbk`** | `BOOL` | `0` | Ẩn (Tag) | [Đầu vào nối dây I/O hoặc Logic] 1=Controlled Equipment is Delivering at Dribble |
-| **`Inp_StopFdbk`** | `BOOL` | `0` | Ẩn (Tag) | [Đầu vào nối dây I/O hoặc Logic] 1=Controlled Equipment is confirmed Stopped |
-| **`Inp_CtrldEqpFault`** | `BOOL` | `0` | Hiện (Pin) | [Đầu vào nối dây I/O hoặc Logic] Controlled Equipment device or I/O status 0=OK, 1=fail |
-| **`Inp_RatePVBad`** | `BOOL` | `0` | Ẩn (Tag) | [Đầu vào nối dây I/O hoặc Logic] 1=Rate PV Input Quality = Bad (fail) |
-| **`Inp_RatePVUncertain`** | `BOOL` | `0` | Ẩn (Tag) | [Đầu vào nối dây I/O hoặc Logic] 1=Rate PV Input Quality = Uncertain |
-| **`Inp_QtyPVBad`** | `BOOL` | `0` | Ẩn (Tag) | [Đầu vào nối dây I/O hoặc Logic] 1=Quantity PV Input Quality = Bad (fail) |
-| **`Inp_QtyPVUncertain`** | `BOOL` | `0` | Ẩn (Tag) | [Đầu vào nối dây I/O hoặc Logic] 1=Quantity PV Input Quality = Uncertain |
-| **`Inp_Sim`** | `BOOL` | `0` | Ẩn (Tag) | [Đầu vào nối dây I/O hoặc Logic] Simulation input. When set to 1, the instruction simulates a working dosing action. When set to 0, the instruction controls dosing normally. |
-| **`Inp_ExtInh`** | `BOOL` | `0` | Ẩn (Tag) | [Đầu vào nối dây I/O hoặc Logic] 1=Inhibit External Acquisition, 0=Allow External Acquisition |
-| **`Inp_Reset`** | `BOOL` | `0` | Hiện (Pin) | [Đầu vào nối dây I/O hoặc Logic] 1=Reset all fault conditions and latched Alarms |
-| **`Cfg_LossInQty`** | `BOOL` | `0` | Ẩn (Tag) | [Biến cấu hình thông số] 1=Flow reduces quantity (Xfer Out), 0=Flow increases quantity (Xfer In) |
-| **`Cfg_HasDribble`** | `BOOL` | `0` | Ẩn (Tag) | [Biến cấu hình thông số] 1=Slow to Dribble before complete, 0=Run full flow until complete |
-| **`Cfg_HasEqpFdbk`** | `BOOL` | `0` | Ẩn (Tag) | [Biến cấu hình thông số] 1=Controlled Equipment provides Run (Dribble if used) and Stop Feedback |
-| **`Cfg_UseEqpFdbk`** | `BOOL` | `0` | Ẩn (Tag) | [Biến cấu hình thông số] 1=Use run / dribble / stop feedback, 0=Assume equipment state |
-| **`Cfg_AutoAdjPreact`** | `BOOL` | `0` | Ẩn (Tag) | [Biến cấu hình thông số] 1=Enable automatic adjustment of preact after each delivery |
-| **`Cfg_ShedOnEqpFault`** | `BOOL` | `1` | Ẩn (Tag) | [Biến cấu hình thông số] 1=Stop delivery and Alarm on Equipment Fault; 0=Alarm only on Equipment Fault |
-| **`Cfg_CalcRate`** | `BOOL` | `0` | Ẩn (Tag) | [Biến cấu hình thông số] 1=differentiate Inp_Qty to get Rate, 0=use Inp_Rate |
-| **`Cfg_CalcQty`** | `BOOL` | `0` | Ẩn (Tag) | [Biến cấu hình thông số] 1=integrate Inp_Rate to get Quantity, 0=use Inp_Qty |
-| **`Cfg_HasChanObjRate`** | `BOOL` | `0` | Ẩn (Tag) | [Biến cấu hình thông số] 1=Tells HMI a Channel object (AIChan, etc.) is used for Inp_RatePV |
-| **`Cfg_HasChanObjQty`** | `BOOL` | `0` | Ẩn (Tag) | [Biến cấu hình thông số] 1=Tells HMI a Channel object (AIChan, etc.) is used for Inp_QtyPV |
-| **`Cfg_SetTrack`** | `BOOL` | `1` | Ẩn (Tag) | [Biến cấu hình thông số] This parameter is used to set up bumpless behavior of setting parameters when switching modes. When this parameter is 1, in Program mode the operator settings track the program settings; in Operator mode the program settings track the operator settings; and the simulation inputs match the output values (transitions are bumpless). When this parameter is 0, the operator settings and program settings are not modified by this instruction. In this case, when the mode is changed, the effective value of the setting can change depending on the program-set and operator-set values. |
-| **`Cfg_QtyDecPlcs`** | `DINT` | `2` | Ẩn (Tag) | [Biến cấu hình thông số] Number of decimal places for Quantity display (0..6) |
-| **`Cfg_RateDecPlcs`** | `DINT` | `2` | Ẩn (Tag) | [Biến cấu hình thông số] Number of decimal places for Rate display (0..6) |
-| **`Cfg_HasMoreObj`** | `BOOL` | `0` | Ẩn (Tag) | [Biến cấu hình thông số] 1 = Báo cho HMI biết có đối tượng mở rộng thông tin đi kèm để bật nút điều hướng. |
-| **`Cfg_HasOverTolAlm`** | `BOOL` | `0` | Ẩn (Tag) | [Biến cấu hình thông số] Cấu hình bật/tắt sự tồn tại của cảnh báo: Khi = 1, cảnh báo tương ứng tồn tại và được giám sát; khi = 0, cảnh báo bị vô hiệu hóa. |
-| **`Cfg_HasUnderTolAlm`** | `BOOL` | `0` | Ẩn (Tag) | [Biến cấu hình thông số] Cấu hình bật/tắt sự tồn tại của cảnh báo: Khi = 1, cảnh báo tương ứng tồn tại và được giám sát; khi = 0, cảnh báo bị vô hiệu hóa. |
-| **`Cfg_HasZeroFaultAlm`** | `BOOL` | `0` | Ẩn (Tag) | [Biến cấu hình thông số] Cấu hình bật/tắt sự tồn tại của cảnh báo: Khi = 1, cảnh báo tương ứng tồn tại và được giám sát; khi = 0, cảnh báo bị vô hiệu hóa. |
-| **`Cfg_HasEqpFaultAlm`** | `BOOL` | `0` | Ẩn (Tag) | [Biến cấu hình thông số] Cấu hình bật/tắt sự tồn tại của cảnh báo: Khi = 1, cảnh báo tương ứng tồn tại và được giám sát; khi = 0, cảnh báo bị vô hiệu hóa. |
-| **`Cfg_OverTolResetReqd`** | `BOOL` | `0` | Ẩn (Tag) | [Biến cấu hình thông số] Cấu hình yêu cầu nhấn Reset để xóa cảnh báo: Khi = 1, cảnh báo tự chốt giữ (Latch) và bắt buộc phải có lệnh Reset sau khi tín hiệu đã về bình thường mới xóa được. Khi = 0, cảnh báo tự xóa ngay khi tín hiệu trở về bình thường. |
-| **`Cfg_UnderTolResetReqd`** | `BOOL` | `0` | Ẩn (Tag) | [Biến cấu hình thông số] Cấu hình yêu cầu nhấn Reset để xóa cảnh báo: Khi = 1, cảnh báo tự chốt giữ (Latch) và bắt buộc phải có lệnh Reset sau khi tín hiệu đã về bình thường mới xóa được. Khi = 0, cảnh báo tự xóa ngay khi tín hiệu trở về bình thường. |
-| **`Cfg_ZeroFaultResetReqd`** | `BOOL` | `0` | Ẩn (Tag) | [Biến cấu hình thông số] Cấu hình yêu cầu nhấn Reset để xóa cảnh báo: Khi = 1, cảnh báo tự chốt giữ (Latch) và bắt buộc phải có lệnh Reset sau khi tín hiệu đã về bình thường mới xóa được. Khi = 0, cảnh báo tự xóa ngay khi tín hiệu trở về bình thường. |
-| **`Cfg_EqpFaultResetReqd`** | `BOOL` | `0` | Ẩn (Tag) | [Biến cấu hình thông số] Cấu hình yêu cầu nhấn Reset để xóa cảnh báo: Khi = 1, cảnh báo tự chốt giữ (Latch) và bắt buộc phải có lệnh Reset sau khi tín hiệu đã về bình thường mới xóa được. Khi = 0, cảnh báo tự xóa ngay khi tín hiệu trở về bình thường. |
-| **`Cfg_OverTolAckReqd`** | `BOOL` | `1` | Ẩn (Tag) | [Biến cấu hình thông số] Cấu hình yêu cầu Xác nhận (Acknowledge) cảnh báo: Khi = 1, bắt buộc người vận hành hoặc chương trình gửi lệnh Ack khi có báo động. Khi = 0, cảnh báo tự động được xác nhận ngay khi xuất hiện. |
-| **`Cfg_UnderTolAckReqd`** | `BOOL` | `1` | Ẩn (Tag) | [Biến cấu hình thông số] Cấu hình yêu cầu Xác nhận (Acknowledge) cảnh báo: Khi = 1, bắt buộc người vận hành hoặc chương trình gửi lệnh Ack khi có báo động. Khi = 0, cảnh báo tự động được xác nhận ngay khi xuất hiện. |
-| **`Cfg_ZeroFaultAckReqd`** | `BOOL` | `1` | Ẩn (Tag) | [Biến cấu hình thông số] Cấu hình yêu cầu Xác nhận (Acknowledge) cảnh báo: Khi = 1, bắt buộc người vận hành hoặc chương trình gửi lệnh Ack khi có báo động. Khi = 0, cảnh báo tự động được xác nhận ngay khi xuất hiện. |
-| **`Cfg_EqpFaultAckReqd`** | `BOOL` | `1` | Ẩn (Tag) | [Biến cấu hình thông số] Cấu hình yêu cầu Xác nhận (Acknowledge) cảnh báo: Khi = 1, bắt buộc người vận hành hoặc chương trình gửi lệnh Ack khi có báo động. Khi = 0, cảnh báo tự động được xác nhận ngay khi xuất hiện. |
-| **`Cfg_OverTolSeverity`** | `DINT` | `750` | Ẩn (Tag) | [Biến cấu hình thông số] Cấu hình mức độ nghiêm trọng (Severity) của cảnh báo để điều khiển màu sắc và biểu tượng trên HMI: 1..250 = Thấp (Low), 251..500 = Trung bình (Medium), 501..750 = Cao (High), 751..1000 = Khẩn cấp (Urgent). |
-| **`Cfg_UnderTolSeverity`** | `DINT` | `500` | Ẩn (Tag) | [Biến cấu hình thông số] Cấu hình mức độ nghiêm trọng (Severity) của cảnh báo để điều khiển màu sắc và biểu tượng trên HMI: 1..250 = Thấp (Low), 251..500 = Trung bình (Medium), 501..750 = Cao (High), 751..1000 = Khẩn cấp (Urgent). |
-| **`Cfg_ZeroFaultSeverity`** | `DINT` | `1000` | Ẩn (Tag) | [Biến cấu hình thông số] Cấu hình mức độ nghiêm trọng (Severity) của cảnh báo để điều khiển màu sắc và biểu tượng trên HMI: 1..250 = Thấp (Low), 251..500 = Trung bình (Medium), 501..750 = Cao (High), 751..1000 = Khẩn cấp (Urgent). |
-| **`Cfg_EqpFaultSeverity`** | `DINT` | `1000` | Ẩn (Tag) | [Biến cấu hình thông số] Cấu hình mức độ nghiêm trọng (Severity) của cảnh báo để điều khiển màu sắc và biểu tượng trên HMI: 1..250 = Thấp (Low), 251..500 = Trung bình (Medium), 501..750 = Cao (High), 751..1000 = Khẩn cấp (Urgent). |
-| **`Cfg_MaxQty`** | `REAL` | `1.5000000000000001E+38` | Ẩn (Tag) | [Biến cấu hình thông số] Maximum allowed quantity to deliver (setpoint) (EU) |
-| **`Cfg_EUQtyMult`** | `REAL` | `1` | Ẩn (Tag) | [Biến cấu hình thông số] Rate to Quantity EU Multiplier (e.g., Gal to Bbl.) |
-| **`Cfg_Rollover`** | `REAL` | `0` | Ẩn (Tag) | [Biến cấu hình thông số] Quantity Rollover (e.g., max count for pulse input) |
-| **`Cfg_CountsPerEU`** | `REAL` | `1` | Ẩn (Tag) | [Biến cấu hình thông số] Number of Counts in Inp_QtyPV which equal 1.0 EU |
-| **`Cfg_RateTime`** | `REAL` | `1` | Ẩn (Tag) | [Biến cấu hình thông số] Time factor for rate (60 for /min, 3600 for /hr) (sec) |
-| **`Cfg_RateFiltTC`** | `REAL` | `0.1` | Ẩn (Tag) | [Biến cấu hình thông số] Filter Time Constant (sec) for calculated Rate |
-| **`Cfg_LoRateCutoff`** | `REAL` | `0` | Ẩn (Tag) | [Biến cấu hình thông số] Rate below which to report zero flow (Inp_RatePV untis) |
-| **`Cfg_SettleT`** | `REAL` | `1` | Ẩn (Tag) | [Biến cấu hình thông số] Time to allow flow to stop before allowing tolerance check (sec) |
-| **`Cfg_BumpT`** | `REAL` | `0` | Ẩn (Tag) | [Biến cấu hình thông số] Bump (manual top-off) Time (sec) |
-| **`Cfg_AutoAdjPct`** | `REAL` | `10` | Ẩn (Tag) | [Biến cấu hình thông số] Percentage of delivery error to auto-adjust preact (%) |
-| **`Cfg_SimRate`** | `REAL` | `1` | Ẩn (Tag) | [Biến cấu hình thông số] Rate at which to deliver when running in Simulation (EU/rate time) |
-| **`Cfg_SimDribbleRate`** | `REAL` | `0.1` | Ẩn (Tag) | [Biến cấu hình thông số] Rate at which to dribble when running in Simulation (EU/rate time) |
-| **`Cfg_ClearPulseT`** | `REAL` | `1` | Ẩn (Tag) | [Biến cấu hình thông số] Time to pulse Out_Clear to clear external totalizer (sec) |
-| **`Cfg_FaultT`** | `REAL` | `10` | Ẩn (Tag) | [Biến cấu hình thông số] Time for Equipment Feedback to follow Output before Fault (sec) |
-| **`Cfg_OperKeep`** | `SINT` | `2#0000_0000` | Ẩn (Tag) | [Biến cấu hình thông số] Operator keeps control in Program command source: Bit .0 = Operator keeps Start/stop Bit .1 = Operator keeps Setpoint Bit .2 = Operator keeps Dribble/preact Bit .3 = Operator keeps Tolerances |
-| **`Cfg_ProgKeep`** | `SINT` | `2#0000_0000` | Ẩn (Tag) | [Biến cấu hình thông số] Program keeps control in Operator command source: Bit .0 = Program keeps Start/stop Bit .1 = Program keeps Setpoint Bit .2 = Program keeps Dribble/preact Bit .3 = Program keeps Tolerances |
-| **`Cfg_ExtKeep`** | `SINT` | `2#0000_0000` | Ẩn (Tag) | [Biến cấu hình thông số] External keeps control: Bit .0 = External keeps Start/stop Bit .1 = External keeps Setpoint Bit .2 = External keeps Dribble/preact Bit .3 = External keeps Tolerances |
-| **`PSet_SP`** | `REAL` | `0` | Ẩn (Tag) | [Giá trị đặt từ Chương trình PLC] Program Setting of total quantity to deliver (EU) |
-| **`PSet_DribbleQty`** | `REAL` | `0` | Ẩn (Tag) | [Giá trị đặt từ Chương trình PLC] Program Setting of quantity to dribble (EU) |
-| **`PSet_Preact`** | `REAL` | `0` | Ẩn (Tag) | [Giá trị đặt từ Chương trình PLC] Program Setting of amount before total to stop flow (EU) |
-| **`PSet_TolHi`** | `REAL` | `0` | Ẩn (Tag) | [Giá trị đặt từ Chương trình PLC] Program Setting of High Tolerance Limit (OK amount > SP) |
-| **`PSet_TolLo`** | `REAL` | `0` | Ẩn (Tag) | [Giá trị đặt từ Chương trình PLC] Program Setting of Low Tolerance Limit (OK amount < SP) |
-| **`PSet_Owner`** | `DINT` | `0` | Ẩn (Tag) | [Giá trị đặt từ Chương trình PLC] Mã định danh chủ sở hữu chương trình (Program Owner ID: khác 0 để đăng ký chiếm quyền, bằng 0 để nhả quyền). |
-| **`XSet_SP`** | `REAL` | `0` | Ẩn (Tag) | [Giá trị đặt từ Hệ thống ngoài (External)] External Setting of total quantity to deliver (EU) |
-| **`XSet_DribbleQty`** | `REAL` | `0` | Ẩn (Tag) | [Giá trị đặt từ Hệ thống ngoài (External)] External Setting of quantity to dribble (EU) |
-| **`XSet_Preact`** | `REAL` | `0` | Ẩn (Tag) | [Giá trị đặt từ Hệ thống ngoài (External)] External Setting of amount before total to stop flow (EU) |
-| **`XSet_TolHi`** | `REAL` | `0` | Ẩn (Tag) | [Giá trị đặt từ Hệ thống ngoài (External)] External Setting of High Tolerance Limit (OK amount > SP) |
-| **`XSet_TolLo`** | `REAL` | `0` | Ẩn (Tag) | [Giá trị đặt từ Hệ thống ngoài (External)] External Setting of Low Tolerance Limit (OK amount < SP) |
-| **`PCmd_ClearTot`** | `BOOL` | `0` | Ẩn (Tag) | [Lệnh từ Chương trình PLC (Xung 1-shot)] Lệnh từ Chương trình tự động (Program) để Clear Totalizer Qty |
-| **`PCmd_StartTot`** | `BOOL` | `0` | Ẩn (Tag) | [Lệnh từ Chương trình PLC (Xung 1-shot)] Lệnh từ Chương trình tự động (Program) để Start Totalizer |
-| **`PCmd_StopTot`** | `BOOL` | `0` | Ẩn (Tag) | [Lệnh từ Chương trình PLC (Xung 1-shot)] Lệnh từ Chương trình tự động (Program) để Stop Totalizer |
-| **`PCmd_StartFlow`** | `BOOL` | `0` | Ẩn (Tag) | [Lệnh từ Chương trình PLC (Xung 1-shot)] Lệnh từ Chương trình tự động (Program) để Start Delivery |
-| **`PCmd_StopFlow`** | `BOOL` | `0` | Ẩn (Tag) | [Lệnh từ Chương trình PLC (Xung 1-shot)] Lệnh từ Chương trình tự động (Program) để Stop/Pause Delivery |
-| **`PCmd_CheckTol`** | `BOOL` | `0` | Ẩn (Tag) | [Lệnh từ Chương trình PLC (Xung 1-shot)] Lệnh từ Chương trình tự động (Program) để Check Tolerances |
-| **`PCmd_Bump`** | `BOOL` | `0` | Ẩn (Tag) | [Lệnh từ Chương trình PLC (Xung 1-shot)] When PCmd_Bump is set to 1: • If the configured bump time (Cfg_BumpT) is non-zero, then bump delivery for the configured bump time – PCmd_Bump is cleared automatically • If the configured bump time (Cfg_BumpT) is zero, then bump delivery until PCmd_Bump is returned to 0 – PCmd_Bump is not cleared automatically |
-| **`PCmd_Prog`** | `BOOL` | `0` | Ẩn (Tag) | [Lệnh từ Chương trình PLC (Xung 1-shot)] Lệnh từ Chương trình tự động (Program) để select Program (Oper to Prog) |
-| **`PCmd_Oper`** | `BOOL` | `0` | Ẩn (Tag) | [Lệnh từ Chương trình PLC (Xung 1-shot)] Lệnh từ Chương trình tự động (Program) để select Operator (Prog to Oper) |
-| **`PCmd_Lock`** | `BOOL` | `0` | Ẩn (Tag) | [Lệnh từ Chương trình PLC (Xung 1-shot)] Lệnh từ Chương trình tự động (Program) để Khóa cứng chế độ Program (không cho phép Operator giành quyền) |
-| **`PCmd_Unlock`** | `BOOL` | `0` | Ẩn (Tag) | [Lệnh từ Chương trình PLC (Xung 1-shot)] Lệnh từ Chương trình tự động (Program) để Unlock Program (allow Oper to acquire) |
-| **`PCmd_Normal`** | `BOOL` | `0` | Ẩn (Tag) | [Lệnh từ Chương trình PLC (Xung 1-shot)] Lệnh từ Chương trình tự động (Program) để select Normal (Oper or Prog) |
-| **`PCmd_Reset`** | `BOOL` | `0` | Ẩn (Tag) | [Lệnh từ Chương trình PLC (Xung 1-shot)] Ghi PCmd_Reset = 1 để xóa tất cả các cảnh báo chốt đang chờ Reset (Biến xung tự động xóa về 0 sau khi thực thi). |
-| **`PCmd_OverTolAck`** | `BOOL` | `0` | Ẩn (Tag) | [Lệnh từ Chương trình PLC (Xung 1-shot)] Ghi PCmd_<Alarm>Ack = 1 để Xác nhận (Acknowledge) alarm (Biến xung tự động xóa về 0 sau khi thực thi). |
-| **`PCmd_UnderTolAck`** | `BOOL` | `0` | Ẩn (Tag) | [Lệnh từ Chương trình PLC (Xung 1-shot)] Ghi PCmd_<Alarm>Ack = 1 để Xác nhận (Acknowledge) alarm (Biến xung tự động xóa về 0 sau khi thực thi). |
-| **`PCmd_ZeroFaultAck`** | `BOOL` | `0` | Ẩn (Tag) | [Lệnh từ Chương trình PLC (Xung 1-shot)] Ghi PCmd_<Alarm>Ack = 1 để Xác nhận (Acknowledge) alarm (Biến xung tự động xóa về 0 sau khi thực thi). |
-| **`PCmd_EqpFaultAck`** | `BOOL` | `0` | Ẩn (Tag) | [Lệnh từ Chương trình PLC (Xung 1-shot)] Ghi PCmd_<Alarm>Ack = 1 để Xác nhận (Acknowledge) alarm (Biến xung tự động xóa về 0 sau khi thực thi). |
-| **`PCmd_OverTolSuppress`** | `BOOL` | `0` | Ẩn (Tag) | [Lệnh từ Chương trình PLC (Xung 1-shot)] Lệnh từ Chương trình tự động (Program) để Ức chế (Suppress) Out of Tolerance Cảnh báo Cao (High Alarm) |
-| **`PCmd_UnderTolSuppress`** | `BOOL` | `0` | Ẩn (Tag) | [Lệnh từ Chương trình PLC (Xung 1-shot)] Lệnh từ Chương trình tự động (Program) để Ức chế (Suppress) Out of Tolerance Cảnh báo Thấp (Low Alarm) |
-| **`PCmd_ZeroFaultSuppress`** | `BOOL` | `0` | Ẩn (Tag) | [Lệnh từ Chương trình PLC (Xung 1-shot)] Lệnh từ Chương trình tự động (Program) để Ức chế (Suppress) Zero Fault Alarm |
-| **`PCmd_EqpFaultSuppress`** | `BOOL` | `0` | Ẩn (Tag) | [Lệnh từ Chương trình PLC (Xung 1-shot)] Lệnh từ Chương trình tự động (Program) để Ức chế (Suppress) Equipment Fault Alarm |
-| **`PCmd_OverTolUnsuppress`** | `BOOL` | `0` | Ẩn (Tag) | [Lệnh từ Chương trình PLC (Xung 1-shot)] Lệnh từ Chương trình tự động (Program) để Gỡ bỏ ức chế (Unsuppress) Out of Tolerance Cảnh báo Cao (High Alarm) |
-| **`PCmd_UnderTolUnsuppress`** | `BOOL` | `0` | Ẩn (Tag) | [Lệnh từ Chương trình PLC (Xung 1-shot)] Lệnh từ Chương trình tự động (Program) để Gỡ bỏ ức chế (Unsuppress) Out of Tolerance Cảnh báo Thấp (Low Alarm) |
-| **`PCmd_ZeroFaultUnsuppress`** | `BOOL` | `0` | Ẩn (Tag) | [Lệnh từ Chương trình PLC (Xung 1-shot)] Lệnh từ Chương trình tự động (Program) để Gỡ bỏ ức chế (Unsuppress) Zero Fault Alarm |
-| **`PCmd_EqpFaultUnsuppress`** | `BOOL` | `0` | Ẩn (Tag) | [Lệnh từ Chương trình PLC (Xung 1-shot)] Lệnh từ Chương trình tự động (Program) để Gỡ bỏ ức chế (Unsuppress) Equipment Fault Alarm |
-| **`PCmd_OverTolUnshelve`** | `BOOL` | `0` | Ẩn (Tag) | [Lệnh từ Chương trình PLC (Xung 1-shot)] Ghi PCmd_<Alarm>Gỡ bỏ tạm hoãn (Unshelve) = 1 để Gỡ bỏ tạm hoãn (Unshelve) alarm (Biến xung tự động xóa về 0 sau khi thực thi). |
-| **`PCmd_UnderTolUnshelve`** | `BOOL` | `0` | Ẩn (Tag) | [Lệnh từ Chương trình PLC (Xung 1-shot)] Ghi PCmd_<Alarm>Gỡ bỏ tạm hoãn (Unshelve) = 1 để Gỡ bỏ tạm hoãn (Unshelve) alarm (Biến xung tự động xóa về 0 sau khi thực thi). |
-| **`PCmd_ZeroFaultUnshelve`** | `BOOL` | `0` | Ẩn (Tag) | [Lệnh từ Chương trình PLC (Xung 1-shot)] Ghi PCmd_<Alarm>Gỡ bỏ tạm hoãn (Unshelve) = 1 để Gỡ bỏ tạm hoãn (Unshelve) alarm (Biến xung tự động xóa về 0 sau khi thực thi). |
-| **`PCmd_EqpFaultUnshelve`** | `BOOL` | `0` | Ẩn (Tag) | [Lệnh từ Chương trình PLC (Xung 1-shot)] Ghi PCmd_<Alarm>Gỡ bỏ tạm hoãn (Unshelve) = 1 để Gỡ bỏ tạm hoãn (Unshelve) alarm (Biến xung tự động xóa về 0 sau khi thực thi). |
-| **`MCmd_Rel`** | `BOOL` | `0` | Ẩn (Tag) | [Lệnh từ tab Bảo trì (HMI Maintenance)] Lệnh từ Nhân viên bảo trì (Maintenance) để Release (Maint to Oper/Prog/Ovrd) |
-| **`OCmd_Unlock`** | `BOOL` | `0` | Ẩn (Tag) | [Lệnh từ màn hình HMI Operator] Lệnh từ Người vận hành (Operator HMI) để Unlock Operator (allow Prog to acquire) |
-| **`XCmd_ClearTot`** | `BOOL` | `0` | Ẩn (Tag) | [Lệnh từ Hệ thống ngoài (External)] Lệnh từ Hệ thống ngoài (External) để Clear Totalizer Qty |
-| **`XCmd_StartTot`** | `BOOL` | `0` | Ẩn (Tag) | [Lệnh từ Hệ thống ngoài (External)] Lệnh từ Hệ thống ngoài (External) để Start Totalizer |
-| **`XCmd_StopTot`** | `BOOL` | `0` | Ẩn (Tag) | [Lệnh từ Hệ thống ngoài (External)] Lệnh từ Hệ thống ngoài (External) để Stop Totalizer |
-| **`XCmd_StartFlow`** | `BOOL` | `0` | Ẩn (Tag) | [Lệnh từ Hệ thống ngoài (External)] External command to Start Deliver |
-| **`XCmd_StopFlow`** | `BOOL` | `0` | Ẩn (Tag) | [Lệnh từ Hệ thống ngoài (External)] Lệnh từ Hệ thống ngoài (External) để Stop/Pause Delivery |
-| **`XCmd_CheckTol`** | `BOOL` | `0` | Ẩn (Tag) | [Lệnh từ Hệ thống ngoài (External)] Lệnh từ Hệ thống ngoài (External) để Check Tolerances |
-| **`XCmd_Bump`** | `BOOL` | `0` | Ẩn (Tag) | [Lệnh từ Hệ thống ngoài (External)] Lệnh từ Hệ thống ngoài (External) để Bump Delivery for Under Tolerance |
-| **`XCmd_Acq`** | `BOOL` | `0` | Ẩn (Tag) | [Lệnh từ Hệ thống ngoài (External)] Lệnh từ Hệ thống ngoài (External) để Acquire (Oper/Prog to Ext) |
-| **`XCmd_Rel`** | `BOOL` | `0` | Ẩn (Tag) | [Lệnh từ Hệ thống ngoài (External)] Lệnh từ Hệ thống ngoài (External) để Release (Ext to Oper/Prog) |
-| **`XCmd_Reset`** | `BOOL` | `0` | Ẩn (Tag) | [Lệnh từ Hệ thống ngoài (External)] Ext Cmd to clear shed latches and cleared alarms |
+| **`EnableIn`** | `BOOL` | `1` | Ẩn (Tag) | Chân kích hoạt thực thi khối AOI trên Rung (Enable In): Trong Ladder (LD), nếu điều kiện Rung = True thì chạy chương trình chính (Logic routine), nếu Rung = False thì chạy chương trình xử lý khi ngắt (EnableInFalse routine). Trong FBD, nếu bằng 1 hoặc bỏ trống không nối dây thì khối hoạt động bình thường |
+| **`Inp_RatePV`** | `REAL` | `0` | Hiện (Pin) | [Đầu vào nối dây I/O hoặc Logic] Tín hiệu lưu lượng tức thời từ lưu lượng kế (Flow Rate, đơn vị EU/thời gian theo Cfg_RateTime) |
+| **`Inp_QtyPV`** | `REAL` | `0` | Hiện (Pin) | [Đầu vào nối dây I/O hoặc Logic] Tín hiệu tổng khối lượng từ Cân (Weigh Scale) hoặc tổng thể tích/xung từ Lưu lượng kế (Flowmeter, đơn vị EU hoặc số xung) |
+| **`Inp_RatePVSrcQ`** | `DINT` | `0` | Ẩn (Tag) | [Đầu vào nối dây I/O hoặc Logic] Mã nguồn gốc và chất lượng (enum) của tín hiệu lưu lượng tức thời Inp_RatePV |
+| **`Inp_QtyPVSrcQ`** | `DINT` | `0` | Ẩn (Tag) | [Đầu vào nối dây I/O hoặc Logic] Mã nguồn gốc và chất lượng (enum) của tín hiệu khối lượng/thể tích Inp_QtyPV |
+| **`Inp_RatePVNotify`** | `DINT` | `0` | Ẩn (Tag) | [Đầu vào nối dây I/O hoặc Logic] Mã mức độ ưu tiên cảnh báo và xác nhận (enum) của đối tượng đo lưu lượng Inp_RatePV |
+| **`Inp_QtyPVNotify`** | `DINT` | `0` | Ẩn (Tag) | [Đầu vào nối dây I/O hoặc Logic] Mã mức độ ưu tiên cảnh báo và xác nhận (enum) của đối tượng đo khối lượng/thể tích Inp_QtyPV |
+| **`Inp_RunFdbk`** | `BOOL` | `0` | Ẩn (Tag) | [Đầu vào nối dây I/O hoặc Logic] Tín hiệu tiếp điểm phụ phản hồi trạng thái Chạy từ động cơ/khởi động từ (1 = Động cơ đang chạy, 0 = Động cơ đã dừng) |
+| **`Inp_DribbleFdbk`** | `BOOL` | `0` | Ẩn (Tag) | [Đầu vào nối dây I/O hoặc Logic] Tín hiệu phản hồi xác nhận thiết bị định lượng đang chạy ở chế độ Nạp tinh tốc độ chậm (1 = Delivering at Dribble) |
+| **`Inp_StopFdbk`** | `BOOL` | `0` | Ẩn (Tag) | [Đầu vào nối dây I/O hoặc Logic] Tín hiệu phản hồi xác nhận thiết bị định lượng đã Dừng hoàn toàn (1 = Confirmed Stopped) |
+| **`Inp_CtrldEqpFault`** | `BOOL` | `0` | Hiện (Pin) | [Đầu vào nối dây I/O hoặc Logic] Tín hiệu báo lỗi từ thiết bị chấp hành định lượng (van/bơm nạp mẻ): 0 = Tốt (OK), 1 = Lỗi (Fail) |
+| **`Inp_RatePVBad`** | `BOOL` | `0` | Ẩn (Tag) | [Đầu vào nối dây I/O hoặc Logic] 1 = Tín hiệu lưu lượng tức thời Inp_RatePV bị lỗi chất lượng xấu (Bad/Fail) |
+| **`Inp_RatePVUncertain`** | `BOOL` | `0` | Ẩn (Tag) | [Đầu vào nối dây I/O hoặc Logic] 1 = Tín hiệu lưu lượng tức thời Inp_RatePV có chất lượng không chắc chắn (Uncertain) |
+| **`Inp_QtyPVBad`** | `BOOL` | `0` | Ẩn (Tag) | [Đầu vào nối dây I/O hoặc Logic] 1 = Tín hiệu khối lượng/thể tích đầu vào Inp_QtyPV bị lỗi chất lượng xấu (Bad/Fail) |
+| **`Inp_QtyPVUncertain`** | `BOOL` | `0` | Ẩn (Tag) | [Đầu vào nối dây I/O hoặc Logic] 1 = Tín hiệu khối lượng/thể tích đầu vào Inp_QtyPV có chất lượng không chắc chắn (Uncertain) |
+| **`Inp_Sim`** | `BOOL` | `0` | Ẩn (Tag) | [Đầu vào nối dây I/O hoặc Logic] Chân kích hoạt chế độ Mô phỏng (Simulation): Khi = 1, khóa các ngõ ra vật lý ở mức an toàn và dùng giá trị/phản hồi giả lập nội bộ; khi = 0, vận hành thực tế bình thường |
+| **`Inp_ExtInh`** | `BOOL` | `0` | Ẩn (Tag) | [Đầu vào nối dây I/O hoặc Logic] Chân khóa cấm nguồn lệnh ngoài (External Inhibit): 1 = Cấm chế độ External chiếm quyền điều khiển; 0 = Cho phép External chiếm quyền |
+| **`Inp_Reset`** | `BOOL` | `0` | Hiện (Pin) | [Đầu vào nối dây I/O hoặc Logic] Chân nhận xung xóa lỗi từ chương trình PLC: Khi = 1, xóa tất cả các cảnh báo chốt (Latched) và chốt ngắt bảo vệ (Shed) đã hết điều kiện lỗi |
+| **`Cfg_LossInQty`** | `BOOL` | `0` | Ẩn (Tag) | [Biến cấu hình thông số] Chiều cân định lượng (Loss-in-Weight): 1 = Cân xả giảm khối lượng (xuất liệu ra khỏi bồn cân); 0 = Cân nạp tăng khối lượng (nạp liệu vào bồn cân) |
+| **`Cfg_HasDribble`** | `BOOL` | `0` | Ẩn (Tag) | [Biến cấu hình thông số] 1 = Sử dụng chế độ nạp 2 cấp tốc độ (chuyển sang nạp tinh nhỏ giọt Dribble ở cuối mẻ); 0 = Chỉ nạp 1 cấp tốc độ nhanh cho đến khi kết thúc |
+| **`Cfg_HasEqpFdbk`** | `BOOL` | `0` | Ẩn (Tag) | [Biến cấu hình thông số] 1 = Thiết bị chấp hành định lượng có cấp tín hiệu phản hồi chạy/nạp tinh/dừng về PLC |
+| **`Cfg_UseEqpFdbk`** | `BOOL` | `0` | Ẩn (Tag) | [Biến cấu hình thông số] 1 = Sử dụng tín hiệu phản hồi của thiết bị định lượng để giám sát lỗi; 0 = Bỏ qua phản hồi |
+| **`Cfg_AutoAdjPreact`** | `BOOL` | `0` | Ẩn (Tag) | [Biến cấu hình thông số] 1 = Bật thuật toán tự động học và hiệu chỉnh lượng ngắt sớm (Auto-Adjust Preact) sau mỗi mẻ dựa trên sai số mẻ trước; 0 = Dùng Preact cố định |
+| **`Cfg_ShedOnEqpFault`** | `BOOL` | `1` | Ẩn (Tag) | [Biến cấu hình thông số] 1 = Ngắt dừng nạp mẻ ngay lập tức và phát báo động khi bị lỗi thiết bị (EqpFault); 0 = Chỉ phát báo động |
+| **`Cfg_CalcRate`** | `BOOL` | `0` | Ẩn (Tag) | [Biến cấu hình thông số] 1 = Tính đạo hàm khối lượng cân (Inp_QtyPV) theo thời gian để suy ra lưu lượng tức thời; 0 = Đọc trực tiếp lưu lượng từ Inp_RatePV |
+| **`Cfg_CalcQty`** | `BOOL` | `0` | Ẩn (Tag) | [Biến cấu hình thông số] 1 = Tính tích phân lưu lượng (Inp_RatePV) theo thời gian để suy ra tổng khối lượng/thể tích mẻ; 0 = Đọc trực tiếp tổng lượng từ Inp_QtyPV |
+| **`Cfg_HasChanObjRate`** | `BOOL` | `0` | Ẩn (Tag) | [Biến cấu hình thông số] 1 = Báo cho HMI biết có khối kênh (P_AIChan) liên kết với tín hiệu lưu lượng Inp_RatePV |
+| **`Cfg_HasChanObjQty`** | `BOOL` | `0` | Ẩn (Tag) | [Biến cấu hình thông số] 1 = Báo cho HMI biết có khối kênh (P_AIChan) liên kết với tín hiệu khối lượng Inp_QtyPV |
+| **`Cfg_SetTrack`** | `BOOL` | `1` | Ẩn (Tag) | [Biến cấu hình thông số] 1 = Cho phép các giá trị đặt (PSet_CV / OSet_CV / SP) tự động bám theo ngõ ra thực tế hiện hành để chuyển mạch không giật (Bumpless Transfer) giữa Operator và Program |
+| **`Cfg_QtyDecPlcs`** | `DINT` | `2` | Ẩn (Tag) | [Biến cấu hình thông số] Số chữ số thập phân hiển thị cho khối lượng/thể tích mẻ trên HMI (từ 0 đến 6 chữ số) |
+| **`Cfg_RateDecPlcs`** | `DINT` | `2` | Ẩn (Tag) | [Biến cấu hình thông số] Số chữ số thập phân hiển thị cho lưu lượng nạp tức thời trên HMI (từ 0 đến 6 chữ số) |
+| **`Cfg_HasMoreObj`** | `BOOL` | `0` | Ẩn (Tag) | [Biến cấu hình thông số] 1 = Báo cho HMI biết có đối tượng mở rộng thông tin đi kèm để bật nút điều hướng mở cửa sổ chi tiết |
+| **`Cfg_HasOverTolAlm`** | `BOOL` | `0` | Ẩn (Tag) | [Biến cấu hình thông số] Cấu hình bật/tắt cảnh báo khối lượng/lưu lượng mẻ vượt dung sai trên (Over Tolerance): 1 = Có sử dụng và giám sát cảnh báo này; 0 = Vô hiệu hóa cảnh báo |
+| **`Cfg_HasUnderTolAlm`** | `BOOL` | `0` | Ẩn (Tag) | [Biến cấu hình thông số] Cấu hình bật/tắt cảnh báo khối lượng/lưu lượng mẻ hụt dung sai dưới (Under Tolerance): 1 = Có sử dụng và giám sát cảnh báo này; 0 = Vô hiệu hóa cảnh báo |
+| **`Cfg_HasZeroFaultAlm`** | `BOOL` | `0` | Ẩn (Tag) | [Biến cấu hình thông số] Cấu hình bật/tắt cảnh báo lỗi điểm 0 không xóa được hoặc có dòng chảy bất thường (Zero Fault): 1 = Có sử dụng và giám sát cảnh báo này; 0 = Vô hiệu hóa cảnh báo |
+| **`Cfg_HasEqpFaultAlm`** | `BOOL` | `0` | Ẩn (Tag) | [Biến cấu hình thông số] Cấu hình bật/tắt cảnh báo lỗi thiết bị chấp hành / cảm biến định lượng (Equipment Fault): 1 = Có sử dụng và giám sát cảnh báo này; 0 = Vô hiệu hóa cảnh báo |
+| **`Cfg_OverTolResetReqd`** | `BOOL` | `0` | Ẩn (Tag) | [Biến cấu hình thông số] Cấu hình yêu cầu nhấn Reset để xóa cảnh báo khối lượng/lưu lượng mẻ vượt dung sai trên (Over Tolerance): 1 = Tự chốt giữ (Latch) cảnh báo và bắt buộc phải gửi lệnh Reset sau khi hết điều kiện lỗi mới xóa được; 0 = Tự động xóa cảnh báo ngay khi tín hiệu trở về bình thường |
+| **`Cfg_UnderTolResetReqd`** | `BOOL` | `0` | Ẩn (Tag) | [Biến cấu hình thông số] Cấu hình yêu cầu nhấn Reset để xóa cảnh báo khối lượng/lưu lượng mẻ hụt dung sai dưới (Under Tolerance): 1 = Tự chốt giữ (Latch) cảnh báo và bắt buộc phải gửi lệnh Reset sau khi hết điều kiện lỗi mới xóa được; 0 = Tự động xóa cảnh báo ngay khi tín hiệu trở về bình thường |
+| **`Cfg_ZeroFaultResetReqd`** | `BOOL` | `0` | Ẩn (Tag) | [Biến cấu hình thông số] Cấu hình yêu cầu nhấn Reset để xóa cảnh báo lỗi điểm 0 không xóa được hoặc có dòng chảy bất thường (Zero Fault): 1 = Tự chốt giữ (Latch) cảnh báo và bắt buộc phải gửi lệnh Reset sau khi hết điều kiện lỗi mới xóa được; 0 = Tự động xóa cảnh báo ngay khi tín hiệu trở về bình thường |
+| **`Cfg_EqpFaultResetReqd`** | `BOOL` | `0` | Ẩn (Tag) | [Biến cấu hình thông số] Cấu hình yêu cầu nhấn Reset để xóa cảnh báo lỗi thiết bị chấp hành / cảm biến định lượng (Equipment Fault): 1 = Tự chốt giữ (Latch) cảnh báo và bắt buộc phải gửi lệnh Reset sau khi hết điều kiện lỗi mới xóa được; 0 = Tự động xóa cảnh báo ngay khi tín hiệu trở về bình thường |
+| **`Cfg_OverTolAckReqd`** | `BOOL` | `1` | Ẩn (Tag) | [Biến cấu hình thông số] Cấu hình yêu cầu Xác nhận (Acknowledge) cho cảnh báo khối lượng/lưu lượng mẻ vượt dung sai trên (Over Tolerance): 1 = Bắt buộc người vận hành hoặc chương trình phải gửi lệnh Ack khi có báo động; 0 = Tự động xác nhận ngay khi báo động xuất hiện |
+| **`Cfg_UnderTolAckReqd`** | `BOOL` | `1` | Ẩn (Tag) | [Biến cấu hình thông số] Cấu hình yêu cầu Xác nhận (Acknowledge) cho cảnh báo khối lượng/lưu lượng mẻ hụt dung sai dưới (Under Tolerance): 1 = Bắt buộc người vận hành hoặc chương trình phải gửi lệnh Ack khi có báo động; 0 = Tự động xác nhận ngay khi báo động xuất hiện |
+| **`Cfg_ZeroFaultAckReqd`** | `BOOL` | `1` | Ẩn (Tag) | [Biến cấu hình thông số] Cấu hình yêu cầu Xác nhận (Acknowledge) cho cảnh báo lỗi điểm 0 không xóa được hoặc có dòng chảy bất thường (Zero Fault): 1 = Bắt buộc người vận hành hoặc chương trình phải gửi lệnh Ack khi có báo động; 0 = Tự động xác nhận ngay khi báo động xuất hiện |
+| **`Cfg_EqpFaultAckReqd`** | `BOOL` | `1` | Ẩn (Tag) | [Biến cấu hình thông số] Cấu hình yêu cầu Xác nhận (Acknowledge) cho cảnh báo lỗi thiết bị chấp hành / cảm biến định lượng (Equipment Fault): 1 = Bắt buộc người vận hành hoặc chương trình phải gửi lệnh Ack khi có báo động; 0 = Tự động xác nhận ngay khi báo động xuất hiện |
+| **`Cfg_OverTolSeverity`** | `DINT` | `750` | Ẩn (Tag) | [Biến cấu hình thông số] Mức độ nghiêm trọng (Severity) của cảnh báo khối lượng/lưu lượng mẻ vượt dung sai trên (Over Tolerance) để điều khiển màu sắc và ưu tiên trên HMI: 1..250 = Thấp (Low), 251..500 = Trung bình (Medium), 501..750 = Cao (High), 751..1000 = Khẩn cấp (Urgent) |
+| **`Cfg_UnderTolSeverity`** | `DINT` | `500` | Ẩn (Tag) | [Biến cấu hình thông số] Mức độ nghiêm trọng (Severity) của cảnh báo khối lượng/lưu lượng mẻ hụt dung sai dưới (Under Tolerance) để điều khiển màu sắc và ưu tiên trên HMI: 1..250 = Thấp (Low), 251..500 = Trung bình (Medium), 501..750 = Cao (High), 751..1000 = Khẩn cấp (Urgent) |
+| **`Cfg_ZeroFaultSeverity`** | `DINT` | `1000` | Ẩn (Tag) | [Biến cấu hình thông số] Mức độ nghiêm trọng (Severity) của cảnh báo lỗi điểm 0 không xóa được hoặc có dòng chảy bất thường (Zero Fault) để điều khiển màu sắc và ưu tiên trên HMI: 1..250 = Thấp (Low), 251..500 = Trung bình (Medium), 501..750 = Cao (High), 751..1000 = Khẩn cấp (Urgent) |
+| **`Cfg_EqpFaultSeverity`** | `DINT` | `1000` | Ẩn (Tag) | [Biến cấu hình thông số] Mức độ nghiêm trọng (Severity) của cảnh báo lỗi thiết bị chấp hành / cảm biến định lượng (Equipment Fault) để điều khiển màu sắc và ưu tiên trên HMI: 1..250 = Thấp (Low), 251..500 = Trung bình (Medium), 501..750 = Cao (High), 751..1000 = Khẩn cấp (Urgent) |
+| **`Cfg_MaxQty`** | `REAL` | `1.5000000000000001E+38` | Ẩn (Tag) | [Biến cấu hình thông số] Khối lượng/thể tích mẻ tối đa cho phép cài đặt (Maximum Target Quantity, đơn vị EU) |
+| **`Cfg_EUQtyMult`** | `REAL` | `1` | Ẩn (Tag) | [Biến cấu hình thông số] Hệ số nhân quy đổi đơn vị từ Lưu lượng (Rate EU) sang Tổng lượng (Quantity EU) |
+| **`Cfg_Rollover`** | `REAL` | `0` | Ẩn (Tag) | [Biến cấu hình thông số] Giá trị tràn bộ đếm xung (Rollover Count) của đầu vào Inp_QtyPV khi dùng bộ đếm xung tốc độ cao |
+| **`Cfg_CountsPerEU`** | `REAL` | `1` | Ẩn (Tag) | [Biến cấu hình thông số] Hệ số xung trên mỗi đơn vị kỹ thuật (Counts per EU — số xung từ đồng hồ lưu lượng tương ứng với 1.0 đơn vị thể tích/khối lượng) |
+| **`Cfg_RateTime`** | `REAL` | `1` | Ẩn (Tag) | [Biến cấu hình thông số] Đơn vị cơ sở thời gian để tính tốc độ biến thiên (Rate of Change): 1.0 = mỗi giây (/s), 60.0 = mỗi phút (/min), 3600.0 = mỗi giờ (/h) |
+| **`Cfg_RateFiltTC`** | `REAL` | `0.1` | Ẩn (Tag) | [Biến cấu hình thông số] Hằng số thời gian lọc thông thấp cho giá trị lưu lượng tính toán (giây; 0.0 = không lọc) |
+| **`Cfg_LoRateCutoff`** | `REAL` | `0` | Ẩn (Tag) | [Biến cấu hình thông số] Ngưỡng cắt lưu lượng nhỏ (Low Flow/Rate Cutoff, đơn vị EU): Khi tín hiệu thấp hơn ngưỡng này sẽ được ép về 0.0 để chống trôi bộ đếm tổng |
+| **`Cfg_SettleT`** | `REAL` | `1` | Ẩn (Tag) | [Biến cấu hình thông số] Thời gian chờ dòng chảy lắng dịu hoàn toàn sau khi đóng van trước khi chốt khối lượng cuối cùng để kiểm tra dung sai (giây) |
+| **`Cfg_BumpT`** | `REAL` | `0` | Ẩn (Tag) | [Biến cấu hình thông số] Độ rộng thời gian mở van nhấp bù thêm nguyên liệu (Bump Time, tính bằng giây) khi mẻ bị thiếu |
+| **`Cfg_AutoAdjPct`** | `REAL` | `10` | Ẩn (Tag) | [Biến cấu hình thông số] Phần trăm sai số của mẻ vừa nạp được trích ra để cộng/trừ tự động vào giá trị Preact cho mẻ kế tiếp (%) |
+| **`Cfg_SimRate`** | `REAL` | `1` | Ẩn (Tag) | [Biến cấu hình thông số] Lưu lượng nạp nhanh giả lập khi chạy ở chế độ Mô phỏng (Inp_Sim = 1, đơn vị EU/thời gian) |
+| **`Cfg_SimDribbleRate`** | `REAL` | `0.1` | Ẩn (Tag) | [Biến cấu hình thông số] Lưu lượng nạp tinh nhỏ giọt giả lập khi chạy ở chế độ Mô phỏng (Inp_Sim = 1, đơn vị EU/thời gian) |
+| **`Cfg_ClearPulseT`** | `REAL` | `1` | Ẩn (Tag) | [Biến cấu hình thông số] Độ rộng xung xuất ra chân Out_ClearTot để xóa bộ đếm tổng bên ngoài (giây) |
+| **`Cfg_FaultT`** | `REAL` | `10` | Ẩn (Tag) | [Biến cấu hình thông số] Thời gian chờ tối đa để phản hồi thiết bị định lượng khớp với lệnh xuất ra trước khi báo lỗi EqpFault (giây) |
+| **`Cfg_OperKeep`** | `SINT` | `2#0000_0000` | Ẩn (Tag) | [Biến cấu hình thông số] Từ bit cấu hình cho phép Operator giữ quyền chỉnh thông số ngay cả khi khối ở chế độ Program (.0 = Giữ quyền chọn kênh PV, .1 = Giữ quyền chỉnh ngưỡng cảnh báo) |
+| **`Cfg_ProgKeep`** | `SINT` | `2#0000_0000` | Ẩn (Tag) | [Biến cấu hình thông số] Từ bit cấu hình cho phép Program giữ quyền chỉnh thông số ngay cả khi khối ở chế độ Operator (.0 = Giữ quyền chọn kênh PV, .1 = Giữ quyền chỉnh ngưỡng cảnh báo) |
+| **`Cfg_ExtKeep`** | `SINT` | `2#0000_0000` | Ẩn (Tag) | [Biến cấu hình thông số] Từ bit cấu hình cho phép External giữ quyền điều khiển khi ở Program/Operator (.0 = Giữ tốc độ đặt Reference, .1 = Giữ lệnh điều khiển Commands) |
+| **`PSet_SP`** | `REAL` | `0` | Ẩn (Tag) | [Giá trị đặt từ Chương trình PLC] Giá trị đặt từ Chương trình tự động (Program): Giá trị đặt chính (Setpoint - SP, tính theo đơn vị kỹ thuật PV EU) khi chạy chế độ Tự động (Auto) |
+| **`PSet_DribbleQty`** | `REAL` | `0` | Ẩn (Tag) | [Giá trị đặt từ Chương trình PLC] Giá trị đặt từ Chương trình tự động (Program): Lượng nguyên liệu chuyển sang chạy nạp tinh tốc độ chậm ở cuối mẻ (Dribble Quantity, đơn vị EU) |
+| **`PSet_Preact`** | `REAL` | `0` | Ẩn (Tag) | [Giá trị đặt từ Chương trình PLC] Giá trị đặt từ Chương trình tự động (Program): Lượng nguyên liệu ngắt sớm trước khi đạt tổng mẻ để bù lượng còn rơi trên đường ống (Pre-Act, đơn vị EU) |
+| **`PSet_TolHi`** | `REAL` | `0` | Ẩn (Tag) | [Giá trị đặt từ Chương trình PLC] Giá trị đặt từ Chương trình tự động (Program): Giới hạn dung sai trên cho phép vượt quá giá trị đặt SP của mẻ nạp (High Tolerance Limit, đơn vị EU) |
+| **`PSet_TolLo`** | `REAL` | `0` | Ẩn (Tag) | [Giá trị đặt từ Chương trình PLC] Giá trị đặt từ Chương trình tự động (Program): Giới hạn dung sai dưới cho phép thấp hơn giá trị đặt SP của mẻ nạp (Low Tolerance Limit, đơn vị EU) |
+| **`PSet_Owner`** | `DINT` | `0` | Ẩn (Tag) | [Giá trị đặt từ Chương trình PLC] Giá trị đặt từ Chương trình tự động (Program): Mã định danh Chủ sở hữu (Owner ID: ghi khác 0 để đăng ký chiếm quyền điều khiển, ghi 0 để nhả quyền) |
+| **`XSet_SP`** | `REAL` | `0` | Ẩn (Tag) | [Giá trị đặt từ Hệ thống ngoài] Giá trị đặt từ Hệ thống điều khiển ngoài (External): Giá trị đặt chính (Setpoint - SP, tính theo đơn vị kỹ thuật PV EU) khi chạy chế độ Tự động (Auto) |
+| **`XSet_DribbleQty`** | `REAL` | `0` | Ẩn (Tag) | [Giá trị đặt từ Hệ thống ngoài] Giá trị đặt từ Hệ thống điều khiển ngoài (External): Lượng nguyên liệu chuyển sang chạy nạp tinh tốc độ chậm ở cuối mẻ (Dribble Quantity, đơn vị EU) |
+| **`XSet_Preact`** | `REAL` | `0` | Ẩn (Tag) | [Giá trị đặt từ Hệ thống ngoài] Giá trị đặt từ Hệ thống điều khiển ngoài (External): Lượng nguyên liệu ngắt sớm trước khi đạt tổng mẻ để bù lượng còn rơi trên đường ống (Pre-Act, đơn vị EU) |
+| **`XSet_TolHi`** | `REAL` | `0` | Ẩn (Tag) | [Giá trị đặt từ Hệ thống ngoài] Giá trị đặt từ Hệ thống điều khiển ngoài (External): Giới hạn dung sai trên cho phép vượt quá giá trị đặt SP của mẻ nạp (High Tolerance Limit, đơn vị EU) |
+| **`XSet_TolLo`** | `REAL` | `0` | Ẩn (Tag) | [Giá trị đặt từ Hệ thống ngoài] Giá trị đặt từ Hệ thống điều khiển ngoài (External): Giới hạn dung sai dưới cho phép thấp hơn giá trị đặt SP của mẻ nạp (Low Tolerance Limit, đơn vị EU) |
+| **`PCmd_ClearTot`** | `BOOL` | `0` | Ẩn (Tag) | [Lệnh từ Chương trình PLC (Xung 1-shot)] Lệnh từ Chương trình tự động (Program) để Xóa bộ đếm tổng lưu lượng/khối lượng tích lũy (Clear Totalizer) về 0 |
+| **`PCmd_StartTot`** | `BOOL` | `0` | Ẩn (Tag) | [Lệnh từ Chương trình PLC (Xung 1-shot)] Lệnh từ Chương trình tự động (Program) để Bắt đầu chạy bộ đếm tổng tích lũy (Start Totalizer) |
+| **`PCmd_StopTot`** | `BOOL` | `0` | Ẩn (Tag) | [Lệnh từ Chương trình PLC (Xung 1-shot)] Lệnh từ Chương trình tự động (Program) để Dừng bộ đếm tổng tích lũy (Stop Totalizer) |
+| **`PCmd_StartFlow`** | `BOOL` | `0` | Ẩn (Tag) | [Lệnh từ Chương trình PLC (Xung 1-shot)] Lệnh từ Chương trình tự động (Program) để Bắt đầu chu trình nạp/định lượng mẻ nguyên liệu (Start Delivery) |
+| **`PCmd_StopFlow`** | `BOOL` | `0` | Ẩn (Tag) | [Lệnh từ Chương trình PLC (Xung 1-shot)] Lệnh từ Chương trình tự động (Program) để Dừng hoặc tạm dừng chu trình nạp/định lượng mẻ (Stop/Pause Delivery) |
+| **`PCmd_CheckTol`** | `BOOL` | `0` | Ẩn (Tag) | [Lệnh từ Chương trình PLC (Xung 1-shot)] Lệnh từ Chương trình tự động (Program) để Thực hiện kiểm tra dung sai mẻ nạp (Check Tolerances) |
+| **`PCmd_Bump`** | `BOOL` | `0` | Ẩn (Tag) | [Lệnh từ Chương trình PLC (Xung 1-shot)] Lệnh từ Chương trình tự động (Program) để Nhấp bù thêm một lượng nhỏ nguyên liệu (Bump Delivery) khi mẻ nạp bị thiếu dưới dung sai |
+| **`PCmd_Prog`** | `BOOL` | `0` | Ẩn (Tag) | [Lệnh từ Chương trình PLC (Xung 1-shot)] Lệnh từ Chương trình tự động (Program) để Chuyển nguồn lệnh sang chế độ Chương trình tự động (từ Operator sang Program) |
+| **`PCmd_Oper`** | `BOOL` | `0` | Ẩn (Tag) | [Lệnh từ Chương trình PLC (Xung 1-shot)] Lệnh từ Chương trình tự động (Program) để Chuyển nguồn lệnh sang chế độ Người vận hành (từ Program sang Operator) |
+| **`PCmd_Lock`** | `BOOL` | `0` | Ẩn (Tag) | [Lệnh từ Chương trình PLC (Xung 1-shot)] Lệnh từ Chương trình tự động (Program) để Khóa giữ nguồn lệnh hiện tại (không cho phép nguồn lệnh kia giành quyền) |
+| **`PCmd_Unlock`** | `BOOL` | `0` | Ẩn (Tag) | [Lệnh từ Chương trình PLC (Xung 1-shot)] Lệnh từ Chương trình tự động (Program) để Mở khóa nguồn lệnh hiện tại (cho phép chuyển đổi giữa Operator và Program) |
+| **`PCmd_Normal`** | `BOOL` | `0` | Ẩn (Tag) | [Lệnh từ Chương trình PLC (Xung 1-shot)] Lệnh từ Chương trình tự động (Program) để Đưa nguồn lệnh về chế độ Bình thường mặc định (Normal: Program hoặc Operator theo Cfg_ProgNormal) |
+| **`PCmd_Reset`** | `BOOL` | `0` | Ẩn (Tag) | [Lệnh từ Chương trình PLC (Xung 1-shot)] Lệnh từ Chương trình tự động (Program) để Xóa (Reset) tất cả các chốt lỗi ngắt tải (Shed latches) và các cảnh báo đã hết điều kiện lỗi |
+| **`PCmd_OverTolAck`** | `BOOL` | `0` | Ẩn (Tag) | [Lệnh từ Chương trình PLC (Xung 1-shot)] Lệnh từ Chương trình tự động (Program) để Xác nhận (Acknowledge) cảnh báo khối lượng/lưu lượng mẻ vượt dung sai trên (Over Tolerance) (biến xung tự động xóa về 0 sau khi thực thi) |
+| **`PCmd_UnderTolAck`** | `BOOL` | `0` | Ẩn (Tag) | [Lệnh từ Chương trình PLC (Xung 1-shot)] Lệnh từ Chương trình tự động (Program) để Xác nhận (Acknowledge) cảnh báo khối lượng/lưu lượng mẻ hụt dung sai dưới (Under Tolerance) (biến xung tự động xóa về 0 sau khi thực thi) |
+| **`PCmd_ZeroFaultAck`** | `BOOL` | `0` | Ẩn (Tag) | [Lệnh từ Chương trình PLC (Xung 1-shot)] Lệnh từ Chương trình tự động (Program) để Xác nhận (Acknowledge) cảnh báo lỗi điểm 0 không xóa được hoặc có dòng chảy bất thường (Zero Fault) (biến xung tự động xóa về 0 sau khi thực thi) |
+| **`PCmd_EqpFaultAck`** | `BOOL` | `0` | Ẩn (Tag) | [Lệnh từ Chương trình PLC (Xung 1-shot)] Lệnh từ Chương trình tự động (Program) để Xác nhận (Acknowledge) cảnh báo lỗi thiết bị chấp hành / cảm biến định lượng (Equipment Fault) (biến xung tự động xóa về 0 sau khi thực thi) |
+| **`PCmd_OverTolSuppress`** | `BOOL` | `0` | Ẩn (Tag) | [Lệnh từ Chương trình PLC (Xung 1-shot)] Lệnh từ Chương trình tự động (Program) để Ức chế (Suppress) cảnh báo khối lượng/lưu lượng mẻ vượt dung sai trên (Over Tolerance) từ chương trình (biến xung tự động xóa về 0) |
+| **`PCmd_UnderTolSuppress`** | `BOOL` | `0` | Ẩn (Tag) | [Lệnh từ Chương trình PLC (Xung 1-shot)] Lệnh từ Chương trình tự động (Program) để Ức chế (Suppress) cảnh báo khối lượng/lưu lượng mẻ hụt dung sai dưới (Under Tolerance) từ chương trình (biến xung tự động xóa về 0) |
+| **`PCmd_ZeroFaultSuppress`** | `BOOL` | `0` | Ẩn (Tag) | [Lệnh từ Chương trình PLC (Xung 1-shot)] Lệnh từ Chương trình tự động (Program) để Ức chế (Suppress) cảnh báo lỗi điểm 0 không xóa được hoặc có dòng chảy bất thường (Zero Fault) từ chương trình (biến xung tự động xóa về 0) |
+| **`PCmd_EqpFaultSuppress`** | `BOOL` | `0` | Ẩn (Tag) | [Lệnh từ Chương trình PLC (Xung 1-shot)] Lệnh từ Chương trình tự động (Program) để Ức chế (Suppress) cảnh báo lỗi thiết bị chấp hành / cảm biến định lượng (Equipment Fault) từ chương trình (biến xung tự động xóa về 0) |
+| **`PCmd_OverTolUnsuppress`** | `BOOL` | `0` | Ẩn (Tag) | [Lệnh từ Chương trình PLC (Xung 1-shot)] Lệnh từ Chương trình tự động (Program) để Gỡ bỏ ức chế (Unsuppress) cảnh báo khối lượng/lưu lượng mẻ vượt dung sai trên (Over Tolerance) từ chương trình (biến xung tự động xóa về 0) |
+| **`PCmd_UnderTolUnsuppress`** | `BOOL` | `0` | Ẩn (Tag) | [Lệnh từ Chương trình PLC (Xung 1-shot)] Lệnh từ Chương trình tự động (Program) để Gỡ bỏ ức chế (Unsuppress) cảnh báo khối lượng/lưu lượng mẻ hụt dung sai dưới (Under Tolerance) từ chương trình (biến xung tự động xóa về 0) |
+| **`PCmd_ZeroFaultUnsuppress`** | `BOOL` | `0` | Ẩn (Tag) | [Lệnh từ Chương trình PLC (Xung 1-shot)] Lệnh từ Chương trình tự động (Program) để Gỡ bỏ ức chế (Unsuppress) cảnh báo lỗi điểm 0 không xóa được hoặc có dòng chảy bất thường (Zero Fault) từ chương trình (biến xung tự động xóa về 0) |
+| **`PCmd_EqpFaultUnsuppress`** | `BOOL` | `0` | Ẩn (Tag) | [Lệnh từ Chương trình PLC (Xung 1-shot)] Lệnh từ Chương trình tự động (Program) để Gỡ bỏ ức chế (Unsuppress) cảnh báo lỗi thiết bị chấp hành / cảm biến định lượng (Equipment Fault) từ chương trình (biến xung tự động xóa về 0) |
+| **`PCmd_OverTolUnshelve`** | `BOOL` | `0` | Ẩn (Tag) | [Lệnh từ Chương trình PLC (Xung 1-shot)] Lệnh từ Chương trình tự động (Program) để Gỡ bỏ tạm hoãn (Unshelve) cảnh báo khối lượng/lưu lượng mẻ vượt dung sai trên (Over Tolerance) ngay lập tức (biến xung tự động xóa về 0) |
+| **`PCmd_UnderTolUnshelve`** | `BOOL` | `0` | Ẩn (Tag) | [Lệnh từ Chương trình PLC (Xung 1-shot)] Lệnh từ Chương trình tự động (Program) để Gỡ bỏ tạm hoãn (Unshelve) cảnh báo khối lượng/lưu lượng mẻ hụt dung sai dưới (Under Tolerance) ngay lập tức (biến xung tự động xóa về 0) |
+| **`PCmd_ZeroFaultUnshelve`** | `BOOL` | `0` | Ẩn (Tag) | [Lệnh từ Chương trình PLC (Xung 1-shot)] Lệnh từ Chương trình tự động (Program) để Gỡ bỏ tạm hoãn (Unshelve) cảnh báo lỗi điểm 0 không xóa được hoặc có dòng chảy bất thường (Zero Fault) ngay lập tức (biến xung tự động xóa về 0) |
+| **`PCmd_EqpFaultUnshelve`** | `BOOL` | `0` | Ẩn (Tag) | [Lệnh từ Chương trình PLC (Xung 1-shot)] Lệnh từ Chương trình tự động (Program) để Gỡ bỏ tạm hoãn (Unshelve) cảnh báo lỗi thiết bị chấp hành / cảm biến định lượng (Equipment Fault) ngay lập tức (biến xung tự động xóa về 0) |
+| **`MCmd_Rel`** | `BOOL` | `0` | Ẩn (Tag) | [Lệnh từ tab Bảo trì (HMI Maintenance)] Lệnh từ Nhân viên bảo trì (Maintenance) để Nhả quyền điều khiển (Release) để trả về chế độ Operator/Program |
+| **`OCmd_Unlock`** | `BOOL` | `0` | Ẩn (Tag) | [Lệnh từ màn hình HMI Operator] Lệnh từ Người vận hành (Operator HMI) để Mở khóa nguồn lệnh hiện tại (cho phép chuyển đổi giữa Operator và Program) |
+| **`XCmd_ClearTot`** | `BOOL` | `0` | Ẩn (Tag) | [Lệnh từ Hệ thống ngoài (External)] Lệnh từ Hệ thống ngoài (External) để Xóa bộ đếm tổng lưu lượng/khối lượng tích lũy (Clear Totalizer) về 0 |
+| **`XCmd_StartTot`** | `BOOL` | `0` | Ẩn (Tag) | [Lệnh từ Hệ thống ngoài (External)] Lệnh từ Hệ thống ngoài (External) để Bắt đầu chạy bộ đếm tổng tích lũy (Start Totalizer) |
+| **`XCmd_StopTot`** | `BOOL` | `0` | Ẩn (Tag) | [Lệnh từ Hệ thống ngoài (External)] Lệnh từ Hệ thống ngoài (External) để Dừng bộ đếm tổng tích lũy (Stop Totalizer) |
+| **`XCmd_StartFlow`** | `BOOL` | `0` | Ẩn (Tag) | [Lệnh từ Hệ thống ngoài (External)] Lệnh từ Hệ thống ngoài (External) để Bắt đầu chu trình nạp/định lượng mẻ nguyên liệu (Start Delivery) |
+| **`XCmd_StopFlow`** | `BOOL` | `0` | Ẩn (Tag) | [Lệnh từ Hệ thống ngoài (External)] Lệnh từ Hệ thống ngoài (External) để Dừng hoặc tạm dừng chu trình nạp/định lượng mẻ (Stop/Pause Delivery) |
+| **`XCmd_CheckTol`** | `BOOL` | `0` | Ẩn (Tag) | [Lệnh từ Hệ thống ngoài (External)] Lệnh từ Hệ thống ngoài (External) để Thực hiện kiểm tra dung sai mẻ nạp (Check Tolerances) |
+| **`XCmd_Bump`** | `BOOL` | `0` | Ẩn (Tag) | [Lệnh từ Hệ thống ngoài (External)] Lệnh từ Hệ thống ngoài (External) để Nhấp bù thêm một lượng nhỏ nguyên liệu (Bump Delivery) khi mẻ nạp bị thiếu dưới dung sai |
+| **`XCmd_Acq`** | `BOOL` | `0` | Ẩn (Tag) | [Lệnh từ Hệ thống ngoài (External)] Lệnh từ Hệ thống ngoài (External) để Chiếm quyền điều khiển (Acquire) về chế độ tương ứng |
+| **`XCmd_Rel`** | `BOOL` | `0` | Ẩn (Tag) | [Lệnh từ Hệ thống ngoài (External)] Lệnh từ Hệ thống ngoài (External) để Nhả quyền điều khiển (Release) để trả về chế độ Operator/Program |
+| **`XCmd_Reset`** | `BOOL` | `0` | Ẩn (Tag) | [Lệnh từ Hệ thống ngoài (External)] Lệnh từ Hệ thống ngoài (External) để Xóa (Reset) tất cả các chốt lỗi ngắt tải (Shed latches) và các cảnh báo đã hết điều kiện lỗi |
 
 ## 3. Bảng chi tiết 95 Biến Đầu Ra (`Output Parameters`) của `P_Dose`
 | Tên biến (Output Parameter) | Kiểu dữ liệu | Mặc định | Hiển thị chân | Giải thích chức năng & Cách sử dụng trong Logic/HMI |
 | :--- | :--- | :--- | :--- | :--- |
-| **`EnableOut`** | `BOOL` | - | Ẩn (Tag) | [Chân nối tầng Rung] Ngõ ra nối tầng Rung (EnableOut): Giữ nguyên trạng thái của chân đầu vào EnableIn để nối tiếp sang khối lệnh phía sau. |
-| **`Out_RunFlow`** | `BOOL` | - | Ẩn (Tag) | [Ngõ ra vật lý điều khiển thiết bị/I/O] 1=Deliver at Full (fast) Flow |
-| **`Out_DribbleFlow`** | `BOOL` | - | Ẩn (Tag) | [Ngõ ra vật lý điều khiển thiết bị/I/O] 1=Deliver at Dribble (slow) Flow |
-| **`Out_StopFlow`** | `BOOL` | - | Ẩn (Tag) | [Ngõ ra vật lý điều khiển thiết bị/I/O] 1=Stop Delivery Equipment |
-| **`Out_RunTot`** | `BOOL` | - | Ẩn (Tag) | [Ngõ ra vật lý điều khiển thiết bị/I/O] 1=Run external totalizer (e.g. onboard flowmeter) |
-| **`Out_ClearTot`** | `BOOL` | - | Ẩn (Tag) | [Ngõ ra vật lý điều khiển thiết bị/I/O] 1=Reset external totalizer (e.g. onboard flowmeter) |
-| **`Val_Qty`** | `REAL` | - | Ẩn (Tag) | [Giá trị thực tế đầu ra (Logic/HMI)] Quantity actually delivered (totalizer output) (EU) |
-| **`Val_Rate`** | `REAL` | - | Ẩn (Tag) | [Giá trị thực tế đầu ra (Logic/HMI)] Current Delivery Rate (EU/time) (see Cfg_RateTime) |
-| **`Val_Remain`** | `REAL` | - | Ẩn (Tag) | [Giá trị thực tế đầu ra (Logic/HMI)] Amount yet to deliver to reach Setpoint (EU) |
-| **`Val_PctComplete`** | `REAL` | - | Ẩn (Tag) | [Giá trị thực tế đầu ra (Logic/HMI)] Percent Complete (for Progress Bar on HMI) 0 to 100.00% |
-| **`Val_SP`** | `REAL` | - | Ẩn (Tag) | [Giá trị thực tế đầu ra (Logic/HMI)] Amount to be delivered (Setpoint) (EU) |
-| **`Val_DribbleQty`** | `REAL` | - | Ẩn (Tag) | [Giá trị thực tế đầu ra (Logic/HMI)] Amount to be delivered at slow rate (EU) |
-| **`Val_Preact`** | `REAL` | - | Ẩn (Tag) | [Giá trị thực tế đầu ra (Logic/HMI)] Amount before SP at which flow will be stopped (EU) |
-| **`Val_TolHi`** | `REAL` | - | Ẩn (Tag) | [Giá trị thực tế đầu ra (Logic/HMI)] Allowed Amount > SP (EU) |
-| **`Val_TolLo`** | `REAL` | - | Ẩn (Tag) | [Giá trị thực tế đầu ra (Logic/HMI)] Allowed Amount < SP (EU) |
-| **`SrcQ_IO`** | `SINT` | - | Ẩn (Tag) | [Mã nguồn gốc & chất lượng tín hiệu] Mã nguồn gốc và chất lượng của kênh I/O sơ cấp (kiểu liệt kê enum) |
-| **`SrcQ`** | `SINT` | - | Ẩn (Tag) | [Mã nguồn gốc & chất lượng tín hiệu] Final dose source and quality. GOOD 0 = I/O live and confirmed good quality 1 = I/O live and assumed good quality 2 = No feedback configured, assumed good quality TEST 8 = Device simulated 9 = Device loopback simulation 10 = Manually entered value UNCERTAIN 16 = Live input, off-specification 17 = Value substituted at device/bus 18 = Value substituted by maintenance (Has and not Use) 19 = Shed, using last good value 20 = Shed, using replacement value BAD 32 = Signal failure (out-of-range, NaN, invalid combination) 33 = I/O channel fault 34 = I/O module fault 35 = Bad I/O configuration (for example, scaling parameters) |
-| **`Val_Cmd`** | `SINT` | - | Ẩn (Tag) | [Giá trị thực tế đầu ra (Logic/HMI)] This shows the command being processed, returns to zero once the command succeeds or fails. These values are also used for Inp_OvrdCmd: 0 = None 1 = Clear totalizer 2 = Start totalizer 3 = Start delivery 4 = Start dribble 5 = Bump 6 = Stop flow 7 = Stop totalizer |
-| **`Val_Fdbk`** | `SINT` | - | Ẩn (Tag) | [Giá trị thực tế đầu ra (Logic/HMI)] This shows the feedback input from the device: 0 = None 1 = Stopped 2 = Delivering 3 = Dribbling |
-| **`Val_Sts`** | `SINT` | - | Ẩn (Tag) | [Giá trị thực tế đầu ra (Logic/HMI)] This is the primary status, used to show the operator the confirmed device status: 0 = Power up/reset 1 = Stopped 2 = Totalizing 3 = Delivering 4 = Dribbling 5 = Bumping 6 = Start flow 7 = Start dribble 8 = Stopping 33 = Disabled |
-| **`Val_Fault`** | `SINT` | - | Ẩn (Tag) | [Giá trị thực tế đầu ra (Logic/HMI)] Device Fault Status 0=None, 17=EquipmentFault, 34=CfgErr |
-| **`Val_NotifyAll`** | `SINT` | - | Ẩn (Tag) | [Giá trị thực tế đầu ra (Logic/HMI)] Mã mức độ ưu tiên cảnh báo cao nhất và trạng thái xác nhận của khối này cộng với khối kênh (enum) |
-| **`Val_UnackAlmC`** | `SINT` | - | Ẩn (Tag) | [Giá trị thực tế đầu ra (Logic/HMI)] Tổng số lượng cảnh báo hiện đang chưa được xác nhận (Unacknowledged Alarms) |
-| **`Val_Owner`** | `DINT` | - | Ẩn (Tag) | [Giá trị thực tế đầu ra (Logic/HMI)] Current Object Owner ID (0=not owned) |
-| **`Sts_Cleared`** | `BOOL` | - | Ẩn (Tag) | [Cờ báo trạng thái logic (Status)] 1=Totalizer Clear completed |
-| **`Sts_TotRunning`** | `BOOL` | - | Ẩn (Tag) | [Cờ báo trạng thái logic (Status)] 1=Totalizer Running, 0=Totalizer Stopped |
-| **`Sts_FlowStarting`** | `BOOL` | - | Ẩn (Tag) | [Cờ báo trạng thái logic (Status)] 1=Flow is Starting (Out_Run is ON, Fdbk not showing Run) |
-| **`Sts_FlowRunning`** | `BOOL` | - | Ẩn (Tag) | [Cờ báo trạng thái logic (Status)] 1=Flow is Running (Out_Run is ON, Fdbk shows Running) |
-| **`Sts_DribbleStarting`** | `BOOL` | - | Ẩn (Tag) | [Cờ báo trạng thái logic (Status)] 1=Dribble Starting (Out_Dribble is ON, Fdbk not showing Dribble) |
-| **`Sts_FlowDribble`** | `BOOL` | - | Ẩn (Tag) | [Cờ báo trạng thái logic (Status)] 1=Flow is Dribbling (Out_Dribble is ON, Fdbk shows Dribble) |
-| **`Sts_FlowStopping`** | `BOOL` | - | Ẩn (Tag) | [Cờ báo trạng thái logic (Status)] 1=Flow is Stopping (Out_Stop is ON, Fdbk not showing Stopped) |
-| **`Sts_FlowStopped`** | `BOOL` | - | Ẩn (Tag) | [Cờ báo trạng thái logic (Status)] 1=Flow is Stopped (Out_Stop is ON, Fdbk shows Stopped) |
-| **`Sts_Bumping`** | `BOOL` | - | Ẩn (Tag) | [Cờ báo trạng thái logic (Status)] 1=Bump flow is active |
-| **`Sts_LoRateCutoff`** | `BOOL` | - | Ẩn (Tag) | [Cờ báo trạng thái logic (Status)] 1=Rate PV below low rate cutoff, flow assumed to be zero |
-| **`Sts_Complete`** | `BOOL` | - | Ẩn (Tag) | [Cờ báo trạng thái logic (Status)] 1=Total Delivered > (SP - Preact) |
-| **`Sts_InTol`** | `BOOL` | - | Ẩn (Tag) | [Cờ báo trạng thái logic (Status)] 1=Total Delivered is Within Tolerances |
-| **`Sts_Available`** | `BOOL` | - | Ẩn (Tag) | [Cờ báo trạng thái logic (Status)] 1=Dosing available for control by automation (Prog) |
-| **`Sts_QtyBad`** | `BOOL` | - | Ẩn (Tag) | [Cờ báo trạng thái logic (Status)] 1=Quantity Value is Bad (PV Fail) |
-| **`Sts_QtyUncertain`** | `BOOL` | - | Ẩn (Tag) | [Cờ báo trạng thái logic (Status)] 1=Quantity Value is Uncertain |
-| **`Sts_RateBad`** | `BOOL` | - | Ẩn (Tag) | [Cờ báo trạng thái logic (Status)] 1=Rate Value is Bad (PV Fail) |
-| **`Sts_RateUncertain`** | `BOOL` | - | Ẩn (Tag) | [Cờ báo trạng thái logic (Status)] 1=Rate Value is Uncertain |
-| **`Sts_NotRdy`** | `BOOL` | - | Ẩn (Tag) | [Cờ báo trạng thái logic (Status)] 1=Device Not Ready, see detail bits for reason |
-| **`Nrdy_CfgErr`** | `BOOL` | - | Ẩn (Tag) | [Cờ báo nguyên nhân thiết bị chưa sẵn sàng] 1=Device Not Ready: Lỗi cài đặt thông số cấu hình (Configuration Error) |
-| **`Nrdy_PVBad`** | `BOOL` | - | Ẩn (Tag) | [Cờ báo nguyên nhân thiết bị chưa sẵn sàng] 1=Device Not Ready: PV Bad Quality or Comm Failure |
-| **`Nrdy_EqpFault`** | `BOOL` | - | Ẩn (Tag) | [Cờ báo nguyên nhân thiết bị chưa sẵn sàng] 1=Device Not Ready: External Equipment Fault (Fault or Shed Requires Reset) |
-| **`Nrdy_OoS`** | `BOOL` | - | Ẩn (Tag) | [Cờ báo nguyên nhân thiết bị chưa sẵn sàng] 1=Not Ready: Out of Service |
-| **`Sts_MaintByp`** | `BOOL` | - | Ẩn (Tag) | [Cờ báo trạng thái logic (Status)] 1 = Đang có tác vụ Bypass bảo trì hoạt động (hiển thị biểu tượng Bypass trên HMI) |
-| **`Sts_AlmInh`** | `BOOL` | - | Ẩn (Tag) | [Cờ báo trạng thái logic (Status)] 1=An Alarm is Disabled or Shelved, display icon |
-| **`Sts_Err`** | `BOOL` | - | Ẩn (Tag) | [Cờ báo trạng thái logic (Status)] 1=Error: Bad Configuration, see detail Err bits for reason |
-| **`Err_EU`** | `BOOL` | - | Ẩn (Tag) | [Cờ báo lỗi cài đặt thông số Cfg_*] 1=Error: Cfg_CountsPerEU, Cfg_EUQtyMult or Cfg_Rollowver invalid |
-| **`Err_Rate`** | `BOOL` | - | Ẩn (Tag) | [Cờ báo lỗi cài đặt thông số Cfg_*] 1=Error: Cfg_RateFiltTC or Cfg_RateTime invalid |
-| **`Err_Cutoff`** | `BOOL` | - | Ẩn (Tag) | [Cờ báo lỗi cài đặt thông số Cfg_*] 1=Error: Cfg_LoRateCutoff invalid |
-| **`Err_Limit`** | `BOOL` | - | Ẩn (Tag) | [Cờ báo lỗi cài đặt thông số Cfg_*] 1=Error: Cfg_MaxQty invalid |
-| **`Err_Sim`** | `BOOL` | - | Ẩn (Tag) | [Cờ báo lỗi cài đặt thông số Cfg_*] 1=Error: Cfg_SimDribbleRate or Cfg_SimRate invalid |
-| **`Err_Timer`** | `BOOL` | - | Ẩn (Tag) | [Cờ báo lỗi cài đặt thông số Cfg_*] 1=Error: Cfg_BumpT, Cfg_FaultT or Cfg_ClearPulseT (use 0 to 2147483.647) |
-| **`Err_Alarm`** | `BOOL` | - | Ẩn (Tag) | [Cờ báo lỗi cài đặt thông số Cfg_*] 1 = Lỗi cấu hình: Thông số cảnh báo (Thời gian duy trì tối thiểu, thời gian Shelve, mức Severity) không hợp lệ |
-| **`Sts_OoS`** | `BOOL` | - | Ẩn (Tag) | [Cờ báo trạng thái logic (Status)] 1=Out of Service đang được chọn làm Nguồn lệnh điều khiển hiện hành (ưu tiên cao hơn Maint, Ovrd, Ext, Prog, Oper) |
-| **`Sts_Maint`** | `BOOL` | - | Ẩn (Tag) | [Cờ báo trạng thái logic (Status)] 1=Maintenance đang được chọn làm Nguồn lệnh điều khiển hiện hành (ưu tiên cao hơn Ovrd, Ext, Prog, Oper) |
-| **`Sts_Ext`** | `BOOL` | - | Ẩn (Tag) | [Cờ báo trạng thái logic (Status)] 1=External đang được chọn làm Nguồn lệnh điều khiển hiện hành (ưu tiên cao hơn Prog, Oper) |
-| **`Sts_Prog`** | `BOOL` | - | Ẩn (Tag) | [Cờ báo trạng thái logic (Status)] 1=Program đang được chọn làm Nguồn lệnh điều khiển hiện hành |
-| **`Sts_ProgLocked`** | `BOOL` | - | Ẩn (Tag) | [Cờ báo trạng thái logic (Status)] 1=Program đang được chọn làm Nguồn lệnh điều khiển hiện hành and Locked |
-| **`Sts_Oper`** | `BOOL` | - | Ẩn (Tag) | [Cờ báo trạng thái logic (Status)] 1=Operator đang được chọn làm Nguồn lệnh điều khiển hiện hành |
-| **`Sts_OperLocked`** | `BOOL` | - | Ẩn (Tag) | [Cờ báo trạng thái logic (Status)] 1=Operator đang được chọn làm Nguồn lệnh điều khiển hiện hành and Locked |
-| **`Sts_Normal`** | `BOOL` | - | Ẩn (Tag) | [Cờ báo trạng thái logic (Status)] 1=Selection equals the Normal (Prog or Oper) |
-| **`Sts_ProgReqInh`** | `BOOL` | - | Ẩn (Tag) | [Cờ báo trạng thái logic (Status)] 1=Program request inhibited, cannot Get to Program from current state |
-| **`Sts_MAcqRcvd`** | `BOOL` | - | Ẩn (Tag) | [Cờ báo trạng thái logic (Status)] 1=Maintenance Acquire command received this scan |
-| **`Sts_RdyReset`** | `BOOL` | - | Ẩn (Tag) | [Cờ báo trạng thái logic (Status)] 1 = Có cảnh báo chốt (Latched) hoặc lỗi ngắt tải (Shed) đã hết điều kiện lỗi và sẵn sàng nhận lệnh Reset |
-| **`Sts_RdyAck`** | `BOOL` | - | Ẩn (Tag) | [Cờ báo trạng thái logic (Status)] 1 = Có cảnh báo mới đang chờ được nhấn Xác nhận (Acknowledge) |
-| **`Sts_OverTol`** | `BOOL` | - | Ẩn (Tag) | [Cờ báo trạng thái logic (Status)] 1=Delivery Out of Tolerance High |
-| **`Alm_OverTol`** | `BOOL` | - | Ẩn (Tag) | [Cờ báo động (1 = Đang báo động)] 1=Delivery Out of Tolerance Cảnh báo Cao (High Alarm) |
-| **`Ack_OverTol`** | `BOOL` | - | Ẩn (Tag) | [Cờ xác nhận báo động (1 = Đã Ack)] 1=Out of Tolerance Cảnh báo Cao (High Alarm) đã được Xác nhận (Acknowledged) |
-| **`Sts_OverTolDisabled`** | `BOOL` | - | Ẩn (Tag) | [Cờ báo trạng thái logic (Status)] 1=Out of Tolerance Cảnh báo Cao (High Alarm) đã bị Vô hiệu hóa (Disabled) bởi Bảo trì |
-| **`Sts_OverTolShelved`** | `BOOL` | - | Ẩn (Tag) | [Cờ báo trạng thái logic (Status)] 1=Out of Tolerance Cảnh báo Cao (High Alarm) đã bị Tạm hoãn (Shelved) bởi Người vận hành |
-| **`Sts_OverTolSuppressed`** | `BOOL` | - | Ẩn (Tag) | [Cờ báo trạng thái logic (Status)] 1=Out of Tolerance Cảnh báo Cao (High Alarm) đã bị Ức chế (Suppressed) bởi Chương trình PLC |
-| **`Sts_UnderTol`** | `BOOL` | - | Ẩn (Tag) | [Cờ báo trạng thái logic (Status)] 1=Delivery Out of Tolerance Low |
-| **`Alm_UnderTol`** | `BOOL` | - | Ẩn (Tag) | [Cờ báo động (1 = Đang báo động)] 1=Delivery Out of Tolerance Cảnh báo Thấp (Low Alarm) |
-| **`Ack_UnderTol`** | `BOOL` | - | Ẩn (Tag) | [Cờ xác nhận báo động (1 = Đã Ack)] 1=Out of Tolerance Cảnh báo Thấp (Low Alarm) đã được Xác nhận (Acknowledged) |
-| **`Sts_UnderTolDisabled`** | `BOOL` | - | Ẩn (Tag) | [Cờ báo trạng thái logic (Status)] 1=Out of Tolerance Cảnh báo Thấp (Low Alarm) đã bị Vô hiệu hóa (Disabled) bởi Bảo trì |
-| **`Sts_UnderTolShelved`** | `BOOL` | - | Ẩn (Tag) | [Cờ báo trạng thái logic (Status)] 1=Out of Tolerance Cảnh báo Thấp (Low Alarm) đã bị Tạm hoãn (Shelved) bởi Người vận hành |
-| **`Sts_UnderTolSuppressed`** | `BOOL` | - | Ẩn (Tag) | [Cờ báo trạng thái logic (Status)] 1=Out of Tolerance Cảnh báo Thấp (Low Alarm) đã bị Ức chế (Suppressed) bởi Chương trình PLC |
-| **`Sts_ZeroFault`** | `BOOL` | - | Ẩn (Tag) | [Cờ báo trạng thái logic (Status)] 1=Total did not clear or unexpected flow |
-| **`Alm_ZeroFault`** | `BOOL` | - | Ẩn (Tag) | [Cờ báo động (1 = Đang báo động)] 1=Warning: Total did not clear or still flowing |
-| **`Ack_ZeroFault`** | `BOOL` | - | Ẩn (Tag) | [Cờ xác nhận báo động (1 = Đã Ack)] 1=Zero Fault Alarm đã được Xác nhận (Acknowledged) |
-| **`Sts_ZeroFaultDisabled`** | `BOOL` | - | Ẩn (Tag) | [Cờ báo trạng thái logic (Status)] 1=Zero Fault Alarm đã bị Vô hiệu hóa (Disabled) bởi Bảo trì |
-| **`Sts_ZeroFaultShelved`** | `BOOL` | - | Ẩn (Tag) | [Cờ báo trạng thái logic (Status)] 1=Zero Fault Alarm đã bị Tạm hoãn (Shelved) bởi Người vận hành |
-| **`Sts_ZeroFaultSuppressed`** | `BOOL` | - | Ẩn (Tag) | [Cờ báo trạng thái logic (Status)] 1=Zero Fault Alarm đã bị Ức chế (Suppressed) bởi Chương trình PLC |
-| **`Sts_EqpFault`** | `BOOL` | - | Ẩn (Tag) | [Cờ báo trạng thái logic (Status)] 1=Equipment Fault Detected |
-| **`Alm_EqpFault`** | `BOOL` | - | Ẩn (Tag) | [Cờ báo động (1 = Đang báo động)] 1=Equipment Fault Alarm |
-| **`Ack_EqpFault`** | `BOOL` | - | Ẩn (Tag) | [Cờ xác nhận báo động (1 = Đã Ack)] 1=Equipment Fault Alarm đã được Xác nhận (Acknowledged) |
-| **`Sts_EqpFaultDisabled`** | `BOOL` | - | Ẩn (Tag) | [Cờ báo trạng thái logic (Status)] 1=Equipment Fault Alarm đã bị Vô hiệu hóa (Disabled) bởi Bảo trì |
-| **`Sts_EqpFaultShelved`** | `BOOL` | - | Ẩn (Tag) | [Cờ báo trạng thái logic (Status)] 1=Equipment Fault Alarm đã bị Tạm hoãn (Shelved) bởi Người vận hành |
-| **`Sts_EqpFaultSuppressed`** | `BOOL` | - | Ẩn (Tag) | [Cờ báo trạng thái logic (Status)] 1=Equipment Fault Alarm đã bị Ức chế (Suppressed) bởi Chương trình PLC |
-| **`MRdy_Rel`** | `BOOL` | - | Ẩn (Tag) | [Cờ cho phép sáng nút nhấn trên HMI] 1 = Sẵn sàng nhận lệnh MCmd_Rel (cho phép sáng nút nhấn tương ứng trên HMI Faceplate) |
-| **`ORdy_Unlock`** | `BOOL` | - | Ẩn (Tag) | [Cờ cho phép sáng nút nhấn trên HMI] 1 = Sẵn sàng nhận lệnh OCmd_Unlock (cho phép sáng nút nhấn tương ứng trên HMI Faceplate) |
-| **`P_Dose`** | `BOOL` | - | Ẩn (Tag) | Tham số định danh trùng tên AOI dùng cho công cụ tự động dò tìm thẻ (Auto-discovery) của HMI |
+| **`EnableOut`** | `BOOL` | `-` | Ẩn (Tag) | Ngõ ra nối tầng Rung (Enable Out): Luôn phản ánh nguyên vẹn trạng thái của chân đầu vào EnableIn để nối tiếp sang các khối lệnh phía sau trên cùng nhánh Rung |
+| **`Out_RunFlow`** | `BOOL` | `-` | Ẩn (Tag) | [Ngõ ra vật lý điều khiển thiết bị/I/O] Ngõ ra điều khiển thiết bị nạp mẻ ở tốc độ dòng chảy lớn (1 = Nạp nhanh Full Flow) |
+| **`Out_DribbleFlow`** | `BOOL` | `-` | Ẩn (Tag) | [Ngõ ra vật lý điều khiển thiết bị/I/O] Ngõ ra điều khiển thiết bị nạp mẻ ở tốc độ dòng chảy nhỏ giọt (1 = Nạp tinh Dribble Flow) |
+| **`Out_StopFlow`** | `BOOL` | `-` | Ẩn (Tag) | [Ngõ ra vật lý điều khiển thiết bị/I/O] Ngõ ra điều khiển dừng thiết bị nạp mẻ (1 = Dừng nạp Stop Delivery) |
+| **`Out_RunTot`** | `BOOL` | `-` | Ẩn (Tag) | [Ngõ ra vật lý điều khiển thiết bị/I/O] Ngõ ra cho phép bộ đếm tổng tích lũy bên ngoài hoạt động (1 = Chạy Totalizer ngoài) |
+| **`Out_ClearTot`** | `BOOL` | `-` | Ẩn (Tag) | [Ngõ ra vật lý điều khiển thiết bị/I/O] Ngõ ra phát xung xóa bộ đếm tổng tích lũy bên ngoài (1 = Reset bộ đếm tổng trên lưu lượng kế/cân) |
+| **`Val_Qty`** | `REAL` | `-` | Ẩn (Tag) | [Giá trị thực tế đầu ra (Logic/HMI)] Tổng khối lượng/thể tích mẻ nguyên liệu đặt trước đang được chấp nhận (Accepted Target Quantity, đơn vị EU) |
+| **`Val_Rate`** | `REAL` | `-` | Ẩn (Tag) | [Giá trị thực tế đầu ra (Logic/HMI)] Lưu lượng nạp nguyên liệu tức thời hiện tại (Current Delivery Rate, đơn vị EU/thời gian) |
+| **`Val_Remain`** | `REAL` | `-` | Ẩn (Tag) | [Giá trị thực tế đầu ra (Logic/HMI)] Khối lượng/thể tích nguyên liệu còn lại cần nạp tiếp để đạt tới giá trị đặt SP (đơn vị EU) |
+| **`Val_PctComplete`** | `REAL` | `-` | Ẩn (Tag) | [Giá trị thực tế đầu ra (Logic/HMI)] Phần trăm hoàn thành mẻ nạp hiện tại (0..100.00%, dùng cho thanh tiến trình trên HMI) |
+| **`Val_SP`** | `REAL` | `-` | Ẩn (Tag) | [Giá trị thực tế đầu ra (Logic/HMI)] Giá trị đặt Setpoint (SP) đang áp dụng thực tế cho thuật toán PID (sau khi đã Ramp và kẹp giới hạn, đơn vị PVEU) |
+| **`Val_DribbleQty`** | `REAL` | `-` | Ẩn (Tag) | [Giá trị thực tế đầu ra (Logic/HMI)] Lượng nguyên liệu chuyển sang nạp tinh tốc độ chậm ở cuối mẻ đang áp dụng (đơn vị EU) |
+| **`Val_Preact`** | `REAL` | `-` | Ẩn (Tag) | [Giá trị thực tế đầu ra (Logic/HMI)] Lượng nguyên liệu ngắt sớm trước khi đủ mẻ (Pre-Act / Slop) đang áp dụng (đơn vị EU) |
+| **`Val_TolHi`** | `REAL` | `-` | Ẩn (Tag) | [Giá trị thực tế đầu ra (Logic/HMI)] Lượng dung sai trên cho phép vượt quá SP đang áp dụng (đơn vị EU) |
+| **`Val_TolLo`** | `REAL` | `-` | Ẩn (Tag) | [Giá trị thực tế đầu ra (Logic/HMI)] Lượng dung sai dưới cho phép thấp hơn SP đang áp dụng (đơn vị EU) |
+| **`SrcQ_IO`** | `SINT` | `-` | Ẩn (Tag) | Mã nguồn gốc và chất lượng của kênh tín hiệu I/O sơ cấp (kiểu liệt kê enum) |
+| **`SrcQ`** | `SINT` | `-` | Ẩn (Tag) | Mã nguồn gốc và chất lượng dữ liệu tổng hợp cuối cùng (0 = Tín hiệu thực Tốt đã xác nhận, 1 = Tín hiệu thực Tốt giả định, 2 = Không cấu hình phản hồi/Tốt giả định, 8 = Đang mô phỏng, 9 = Mô phỏng vòng lặp, 10 = Giá trị nhập tay, 16 = Ngoài đặc tính kỹ thuật, 17 = Thay thế tại thiết bị/bus, 18 = Thay thế bởi Bảo trì, 19 = Ngắt bảo vệ giữ giá trị cũ, 20 = Ngắt bảo vệ dùng giá trị thay thế, 32 = Lỗi tín hiệu vượt dải/NaN, 33 = Lỗi kênh I/O, 34 = Lỗi module I/O, 35 = Lỗi cấu hình) |
+| **`Val_Cmd`** | `SINT` | `-` | Ẩn (Tag) | [Giá trị thực tế đầu ra (Logic/HMI)] Mã lệnh định lượng hiện hành (cũng áp dụng cho Inp_OvrdCmd): 0 = Không có lệnh, 1 = Xóa bộ đếm tổng (Clear Totalizer), 2 = Chạy bộ đếm tổng (Start Totalizer), 3 = Bắt đầu nạp mẻ (Start Delivery), 4 = Chuyển sang nạp tinh (Start Dribble), 5 = Nhấp bù (Bump), 6 = Dừng nạp (Stop Flow), 7 = Dừng bộ đếm tổng (Stop Totalizer) |
+| **`Val_Fdbk`** | `SINT` | `-` | Ẩn (Tag) | [Giá trị thực tế đầu ra (Logic/HMI)] Mã phản hồi từ thiết bị định lượng: 0 = Không có, 1 = Đang dừng (Stopped), 2 = Đang nạp nhanh (Delivering), 3 = Đang nạp tinh nhỏ giọt (Dribbling) |
+| **`Val_Sts`** | `SINT` | `-` | Ẩn (Tag) | [Giá trị thực tế đầu ra (Logic/HMI)] Mã trạng thái xác nhận của bộ định lượng: 0 = Khởi động/Reset, 1 = Đang dừng, 2 = Đang đếm tổng, 3 = Đang nạp nhanh (Delivering), 4 = Đang nạp tinh (Dribbling), 5 = Đang nhấp bù (Bumping), 6 = Đang bắt đầu mở dòng nạp, 7 = Đang chuyển sang nạp tinh, 8 = Đang đóng ngắt dòng nạp, 33 = Ngưng phục vụ |
+| **`Val_Fault`** | `SINT` | `-` | Ẩn (Tag) | [Giá trị thực tế đầu ra (Logic/HMI)] Mã trạng thái lỗi thiết bị (Device Fault Status — kiểu liệt kê enum: 0 = Không lỗi, 16 = Lỗi khởi động/mở, 17 = Lỗi dừng/đóng, 20 = Lo, 21 = Hi, 24 = LoLo, 25 = HiHi, 32 = Fail/I/O Fault, 34 = Lỗi cấu hình CfgErr) |
+| **`Val_NotifyAll`** | `SINT` | `-` | Ẩn (Tag) | [Giá trị thực tế đầu ra (Logic/HMI)] Mã mức độ ưu tiên cảnh báo cao nhất và trạng thái xác nhận tổng hợp của khối này cộng với các đối tượng kênh/quá tải liên kết |
+| **`Val_UnackAlmC`** | `SINT` | `-` | Ẩn (Tag) | [Giá trị thực tế đầu ra (Logic/HMI)] Tổng số lượng cảnh báo hiện đang chưa được xác nhận (Unacknowledged Alarms Count) |
+| **`Val_Owner`** | `DINT` | `-` | Ẩn (Tag) | [Giá trị thực tế đầu ra (Logic/HMI)] Mã định danh Chủ sở hữu hiện hành của đối tượng (Current Object Owner ID: 0 = Đang không bị chiếm quyền) |
+| **`Sts_Cleared`** | `BOOL` | `-` | Ẩn (Tag) | [Cờ báo trạng thái logic (Status)] 1 = Đã hoàn tất xóa bộ đếm tổng tích lũy (Totalizer Clear Completed) |
+| **`Sts_TotRunning`** | `BOOL` | `-` | Ẩn (Tag) | [Cờ báo trạng thái logic (Status)] 1 = Bộ đếm tổng tích lũy (Totalizer) đang chạy; 0 = Bộ đếm tổng đang dừng |
+| **`Sts_FlowStarting`** | `BOOL` | `-` | Ẩn (Tag) | [Cờ báo trạng thái logic (Status)] 1 = Đang bắt đầu mở dòng nạp mẻ (Out_RunFlow = 1, đang chờ phản hồi chạy) |
+| **`Sts_FlowRunning`** | `BOOL` | `-` | Ẩn (Tag) | [Cờ báo trạng thái logic (Status)] 1 = Dòng nạp nhanh (Full Flow) đang chảy ổn định (Out_RunFlow = 1 và đã có phản hồi chạy) |
+| **`Sts_DribbleStarting`** | `BOOL` | `-` | Ẩn (Tag) | [Cờ báo trạng thái logic (Status)] 1 = Đang chuyển sang chế độ nạp tinh nhỏ giọt (Out_DribbleFlow = 1, đang chờ phản hồi Dribble) |
+| **`Sts_FlowDribble`** | `BOOL` | `-` | Ẩn (Tag) | [Cờ báo trạng thái logic (Status)] 1 = Đang nạp tinh tốc độ chậm (Dribble Flow) ổn định ở cuối mẻ |
+| **`Sts_FlowStopping`** | `BOOL` | `-` | Ẩn (Tag) | [Cờ báo trạng thái logic (Status)] 1 = Đang đóng ngắt dòng nạp mẻ (Out_StopFlow = 1, đang chờ phản hồi dừng) |
+| **`Sts_FlowStopped`** | `BOOL` | `-` | Ẩn (Tag) | [Cờ báo trạng thái logic (Status)] 1 = Dòng nạp mẻ đã dừng hoàn toàn (Confirmed Stopped) |
+| **`Sts_Bumping`** | `BOOL` | `-` | Ẩn (Tag) | [Cờ báo trạng thái logic (Status)] 1 = Đang thực hiện nhấp bù thêm nguyên liệu (Bump Flow Active) |
+| **`Sts_LoRateCutoff`** | `BOOL` | `-` | Ẩn (Tag) | [Cờ báo trạng thái logic (Status)] 1 = Tốc độ dòng chảy / biến thiên nhỏ hơn ngưỡng cắt (Cfg_LoRateCutoff), giá trị được ép về 0 |
+| **`Sts_Complete`** | `BOOL` | `-` | Ẩn (Tag) | [Cờ báo trạng thái logic (Status)] 1 = Đã nạp đủ khối lượng/thể tích mẻ mục tiêu (Tổng lượng đã nạp >= SP - Preact) |
+| **`Sts_InTol`** | `BOOL` | `-` | Ẩn (Tag) | [Cờ báo trạng thái logic (Status)] 1 = Tổng lượng nguyên liệu thực tế của mẻ nằm trong phạm vi dung sai cho phép [SP - TolLo .. SP + TolHi] |
+| **`Sts_Available`** | `BOOL` | `-` | Ẩn (Tag) | [Cờ báo trạng thái logic (Status)] 1 = Thiết bị sẵn sàng cho Chương trình tự động (Program) điều khiển (đang ở chế độ Program và không có lỗi/liên động ngắt) |
+| **`Sts_QtyBad`** | `BOOL` | `-` | Ẩn (Tag) | [Cờ báo trạng thái logic (Status)] 1 = Giá trị khối lượng/thể tích đo được bị lỗi chất lượng xấu (PV Fail) |
+| **`Sts_QtyUncertain`** | `BOOL` | `-` | Ẩn (Tag) | [Cờ báo trạng thái logic (Status)] 1 = Giá trị khối lượng/thể tích đo được có chất lượng không chắc chắn (Uncertain) |
+| **`Sts_RateBad`** | `BOOL` | `-` | Ẩn (Tag) | [Cờ báo trạng thái logic (Status)] 1 = Giá trị lưu lượng tức thời đo được bị lỗi chất lượng xấu (PV Fail) |
+| **`Sts_RateUncertain`** | `BOOL` | `-` | Ẩn (Tag) | [Cờ báo trạng thái logic (Status)] 1 = Giá trị lưu lượng tức thời đo được có chất lượng không chắc chắn (Uncertain) |
+| **`Sts_NotRdy`** | `BOOL` | `-` | Ẩn (Tag) | [Cờ báo trạng thái logic (Status)] 1 = Thiết bị chưa sẵn sàng hoạt động (kiểm tra các bit Nrdy_* chi tiết để biết nguyên nhân cụ thể) |
+| **`Nrdy_CfgErr`** | `BOOL` | `-` | Ẩn (Tag) | [Cờ báo nguyên nhân thiết bị chưa sẵn sàng] 1 = Thiết bị chưa sẵn sàng hoạt động do: Lỗi cài đặt thông số cấu hình (Configuration Error) |
+| **`Nrdy_PVBad`** | `BOOL` | `-` | Ẩn (Tag) | [Cờ báo nguyên nhân thiết bị chưa sẵn sàng] 1 = Thiết bị chưa sẵn sàng: Tín hiệu đo PV bị lỗi chất lượng xấu (Bad Quality) hoặc mất truyền thông |
+| **`Nrdy_EqpFault`** | `BOOL` | `-` | Ẩn (Tag) | [Cờ báo nguyên nhân thiết bị chưa sẵn sàng] 1 = Thiết bị chưa sẵn sàng hoạt động do: Lỗi thiết bị chấp hành ngoài (External Equipment Fault — cần nhấn Reset) |
+| **`Nrdy_OoS`** | `BOOL` | `-` | Ẩn (Tag) | [Cờ báo nguyên nhân thiết bị chưa sẵn sàng] 1 = Thiết bị chưa sẵn sàng hoạt động do: Đang ở chế độ Ngưng phục vụ (Out of Service) |
+| **`Sts_MaintByp`** | `BOOL` | `-` | Ẩn (Tag) | [Cờ báo trạng thái logic (Status)] 1 = Đang có tác vụ Bypass bảo trì hoặc cưỡng bức bảo trì hoạt động (hiển thị biểu tượng Bypass trên HMI) |
+| **`Sts_AlmInh`** | `BOOL` | `-` | Ẩn (Tag) | [Cờ báo trạng thái logic (Status)] 1 = Đang có ít nhất một cảnh báo bị Tạm hoãn (Shelved), Vô hiệu hóa (Disabled) hoặc Ức chế (Suppressed) — hiển thị biểu tượng chữ "I" trên HMI |
+| **`Sts_Err`** | `BOOL` | `-` | Ẩn (Tag) | [Cờ báo trạng thái logic (Status)] 1 = Có lỗi cài đặt thông số cấu hình Cfg_* (kiểm tra các bit Err_* chi tiết để biết thông số bị nhập sai) |
+| **`Err_EU`** | `BOOL` | `-` | Ẩn (Tag) | [Cờ báo lỗi cài đặt thông số Cfg_*] 1 = Lỗi cấu hình: Dải quy đổi đơn vị kỹ thuật (Engineering Units) có giá trị Tối thiểu bằng Tối đa (Min = Max) |
+| **`Err_Rate`** | `BOOL` | `-` | Ẩn (Tag) | [Cờ báo lỗi cài đặt thông số Cfg_*] 1 = Lỗi cấu hình: Cơ sở thời gian tính tốc độ biến thiên (Cfg_RateTime) không hợp lệ (dùng 1.0=giây, 60.0=phút, 3600.0=giờ, 86400.0=ngày) |
+| **`Err_Cutoff`** | `BOOL` | `-` | Ẩn (Tag) | [Cờ báo lỗi cài đặt thông số Cfg_*] 1 = Lỗi cấu hình: Ngưỡng cắt lưu lượng nhỏ (Cfg_LoRateCutoff) không hợp lệ (nhỏ hơn 0) |
+| **`Err_Limit`** | `BOOL` | `-` | Ẩn (Tag) | [Cờ báo lỗi cài đặt thông số Cfg_*] 1 = Lỗi cấu hình: Ngưỡng kẹp giới hạn trên của PV nhỏ hơn ngưỡng kẹp giới hạn dưới (Cfg_PVHiLim < Cfg_PVLoLim) |
+| **`Err_Sim`** | `BOOL` | `-` | Ẩn (Tag) | [Cờ báo lỗi cài đặt thông số Cfg_*] 1 = Lỗi cấu hình: Thời gian trễ mô phỏng (Cfg_SimFdbkT / Cfg_SimRampT) nằm ngoài phạm vi 0..2.147.483 giây |
+| **`Err_Timer`** | `BOOL` | `-` | Ẩn (Tag) | [Cờ báo lỗi cài đặt thông số Cfg_*] 1 = Lỗi cấu hình: Giá trị đặt bộ định thời gian (Timer Preset) nằm ngoài phạm vi hợp lệ 0..2.147.483 giây |
+| **`Err_Alarm`** | `BOOL` | `-` | Ẩn (Tag) | [Cờ báo lỗi cài đặt thông số Cfg_*] 1 = Lỗi cấu hình cảnh báo: Thời gian duy trì tối thiểu (Min On Time), thời gian tạm hoãn (Shelf Time) hoặc mức độ nghiêm trọng (Severity 1..1000) không hợp lệ |
+| **`Sts_OoS`** | `BOOL` | `-` | Ẩn (Tag) | [Cờ báo trạng thái logic (Status)] 1 = Đang ở chế độ Ngưng phục vụ (Out of Service — ưu tiên cao hơn Maint, Ovrd, Ext, Prog, Oper) |
+| **`Sts_Maint`** | `BOOL` | `-` | Ẩn (Tag) | [Cờ báo trạng thái logic (Status)] 1 = Đang ở chế độ Bảo trì (Maintenance — ưu tiên cao hơn Ovrd, Ext, Prog, Oper) |
+| **`Sts_Ext`** | `BOOL` | `-` | Ẩn (Tag) | [Cờ báo trạng thái logic (Status)] 1 = Đang ở chế độ Điều khiển ngoài (External — ưu tiên cao hơn Prog, Oper) |
+| **`Sts_Prog`** | `BOOL` | `-` | Ẩn (Tag) | [Cờ báo trạng thái logic (Status)] 1 = Đang ở chế độ Chương trình tự động (Program) |
+| **`Sts_ProgLocked`** | `BOOL` | `-` | Ẩn (Tag) | [Cờ báo trạng thái logic (Status)] 1 = Đang ở chế độ Chương trình tự động và đã Khóa (Program Locked — không cho Operator lấy quyền) |
+| **`Sts_Oper`** | `BOOL` | `-` | Ẩn (Tag) | [Cờ báo trạng thái logic (Status)] 1 = Đang ở chế độ Người vận hành trên HMI (Operator) |
+| **`Sts_OperLocked`** | `BOOL` | `-` | Ẩn (Tag) | [Cờ báo trạng thái logic (Status)] 1 = Đang ở chế độ Người vận hành và đã Khóa (Operator Locked — không cho Program lấy quyền) |
+| **`Sts_Normal`** | `BOOL` | `-` | Ẩn (Tag) | [Cờ báo trạng thái logic (Status)] 1 = Nguồn lệnh hiện hành đang khớp với nguồn lệnh Bình thường mặc định (Program hoặc Operator theo Cfg_ProgNormal) |
+| **`Sts_ProgReqInh`** | `BOOL` | `-` | Ẩn (Tag) | [Cờ báo trạng thái logic (Status)] 1 = Yêu cầu chuyển sang chế độ Program đang bị khóa cấm (không thể chuyển sang Program từ trạng thái hiện tại) |
+| **`Sts_MAcqRcvd`** | `BOOL` | `-` | Ẩn (Tag) | [Cờ báo trạng thái logic (Status)] 1 = Đã nhận được lệnh Chiếm quyền bảo trì (MCmd_Acq) trong chu kỳ quét hiện tại |
+| **`Sts_RdyReset`** | `BOOL` | `-` | Ẩn (Tag) | [Cờ báo trạng thái logic (Status)] 1 = Có cảnh báo chốt (Latched) hoặc chốt ngắt bảo vệ (Shed) đã hết lỗi và sẵn sàng nhận lệnh Reset |
+| **`Sts_RdyAck`** | `BOOL` | `-` | Ẩn (Tag) | [Cờ báo trạng thái logic (Status)] 1 = Có cảnh báo đang chờ được nhấn Xác nhận (Acknowledge) |
+| **`Sts_OverTol`** | `BOOL` | `-` | Ẩn (Tag) | [Cờ báo trạng thái logic (Status)] 1 = Đang xuất hiện điều kiện khối lượng/lưu lượng mẻ vượt dung sai trên (Over Tolerance) |
+| **`Alm_OverTol`** | `BOOL` | `-` | Ẩn (Tag) | [Cờ báo động (1 = Đang báo động)] 1 = Đang kích hoạt báo động cho khối lượng/lưu lượng mẻ vượt dung sai trên (Over Tolerance) |
+| **`Ack_OverTol`** | `BOOL` | `-` | Ẩn (Tag) | [Cờ xác nhận báo động (1 = Đã Ack)] 1 = Báo động khối lượng/lưu lượng mẻ vượt dung sai trên (Over Tolerance) đã được Xác nhận (Acknowledged); 0 = Chưa xác nhận |
+| **`Sts_OverTolDisabled`** | `BOOL` | `-` | Ẩn (Tag) | [Cờ báo trạng thái logic (Status)] 1 = Cảnh báo khối lượng/lưu lượng mẻ vượt dung sai trên (Over Tolerance) hiện đang bị Vô hiệu hóa (Disabled) bởi nhân viên bảo trì |
+| **`Sts_OverTolShelved`** | `BOOL` | `-` | Ẩn (Tag) | [Cờ báo trạng thái logic (Status)] 1 = Cảnh báo khối lượng/lưu lượng mẻ vượt dung sai trên (Over Tolerance) hiện đang bị Tạm hoãn (Shelved) bởi người vận hành |
+| **`Sts_OverTolSuppressed`** | `BOOL` | `-` | Ẩn (Tag) | [Cờ báo trạng thái logic (Status)] 1 = Cảnh báo khối lượng/lưu lượng mẻ vượt dung sai trên (Over Tolerance) hiện đang bị Ức chế (Suppressed) bởi chương trình PLC |
+| **`Sts_UnderTol`** | `BOOL` | `-` | Ẩn (Tag) | [Cờ báo trạng thái logic (Status)] 1 = Đang xuất hiện điều kiện khối lượng/lưu lượng mẻ hụt dung sai dưới (Under Tolerance) |
+| **`Alm_UnderTol`** | `BOOL` | `-` | Ẩn (Tag) | [Cờ báo động (1 = Đang báo động)] 1 = Đang kích hoạt báo động cho khối lượng/lưu lượng mẻ hụt dung sai dưới (Under Tolerance) |
+| **`Ack_UnderTol`** | `BOOL` | `-` | Ẩn (Tag) | [Cờ xác nhận báo động (1 = Đã Ack)] 1 = Báo động khối lượng/lưu lượng mẻ hụt dung sai dưới (Under Tolerance) đã được Xác nhận (Acknowledged); 0 = Chưa xác nhận |
+| **`Sts_UnderTolDisabled`** | `BOOL` | `-` | Ẩn (Tag) | [Cờ báo trạng thái logic (Status)] 1 = Cảnh báo khối lượng/lưu lượng mẻ hụt dung sai dưới (Under Tolerance) hiện đang bị Vô hiệu hóa (Disabled) bởi nhân viên bảo trì |
+| **`Sts_UnderTolShelved`** | `BOOL` | `-` | Ẩn (Tag) | [Cờ báo trạng thái logic (Status)] 1 = Cảnh báo khối lượng/lưu lượng mẻ hụt dung sai dưới (Under Tolerance) hiện đang bị Tạm hoãn (Shelved) bởi người vận hành |
+| **`Sts_UnderTolSuppressed`** | `BOOL` | `-` | Ẩn (Tag) | [Cờ báo trạng thái logic (Status)] 1 = Cảnh báo khối lượng/lưu lượng mẻ hụt dung sai dưới (Under Tolerance) hiện đang bị Ức chế (Suppressed) bởi chương trình PLC |
+| **`Sts_ZeroFault`** | `BOOL` | `-` | Ẩn (Tag) | [Cờ báo trạng thái logic (Status)] 1 = Đang xuất hiện điều kiện lỗi điểm 0 không xóa được hoặc có dòng chảy bất thường (Zero Fault) |
+| **`Alm_ZeroFault`** | `BOOL` | `-` | Ẩn (Tag) | [Cờ báo động (1 = Đang báo động)] 1 = Đang kích hoạt báo động cho lỗi điểm 0 không xóa được hoặc có dòng chảy bất thường (Zero Fault) |
+| **`Ack_ZeroFault`** | `BOOL` | `-` | Ẩn (Tag) | [Cờ xác nhận báo động (1 = Đã Ack)] 1 = Báo động lỗi điểm 0 không xóa được hoặc có dòng chảy bất thường (Zero Fault) đã được Xác nhận (Acknowledged); 0 = Chưa xác nhận |
+| **`Sts_ZeroFaultDisabled`** | `BOOL` | `-` | Ẩn (Tag) | [Cờ báo trạng thái logic (Status)] 1 = Cảnh báo lỗi điểm 0 không xóa được hoặc có dòng chảy bất thường (Zero Fault) hiện đang bị Vô hiệu hóa (Disabled) bởi nhân viên bảo trì |
+| **`Sts_ZeroFaultShelved`** | `BOOL` | `-` | Ẩn (Tag) | [Cờ báo trạng thái logic (Status)] 1 = Cảnh báo lỗi điểm 0 không xóa được hoặc có dòng chảy bất thường (Zero Fault) hiện đang bị Tạm hoãn (Shelved) bởi người vận hành |
+| **`Sts_ZeroFaultSuppressed`** | `BOOL` | `-` | Ẩn (Tag) | [Cờ báo trạng thái logic (Status)] 1 = Cảnh báo lỗi điểm 0 không xóa được hoặc có dòng chảy bất thường (Zero Fault) hiện đang bị Ức chế (Suppressed) bởi chương trình PLC |
+| **`Sts_EqpFault`** | `BOOL` | `-` | Ẩn (Tag) | [Cờ báo trạng thái logic (Status)] 1 = Đang xuất hiện điều kiện lỗi thiết bị chấp hành / cảm biến định lượng (Equipment Fault) |
+| **`Alm_EqpFault`** | `BOOL` | `-` | Ẩn (Tag) | [Cờ báo động (1 = Đang báo động)] 1 = Đang kích hoạt báo động cho lỗi thiết bị chấp hành / cảm biến định lượng (Equipment Fault) |
+| **`Ack_EqpFault`** | `BOOL` | `-` | Ẩn (Tag) | [Cờ xác nhận báo động (1 = Đã Ack)] 1 = Báo động lỗi thiết bị chấp hành / cảm biến định lượng (Equipment Fault) đã được Xác nhận (Acknowledged); 0 = Chưa xác nhận |
+| **`Sts_EqpFaultDisabled`** | `BOOL` | `-` | Ẩn (Tag) | [Cờ báo trạng thái logic (Status)] 1 = Cảnh báo lỗi thiết bị chấp hành / cảm biến định lượng (Equipment Fault) hiện đang bị Vô hiệu hóa (Disabled) bởi nhân viên bảo trì |
+| **`Sts_EqpFaultShelved`** | `BOOL` | `-` | Ẩn (Tag) | [Cờ báo trạng thái logic (Status)] 1 = Cảnh báo lỗi thiết bị chấp hành / cảm biến định lượng (Equipment Fault) hiện đang bị Tạm hoãn (Shelved) bởi người vận hành |
+| **`Sts_EqpFaultSuppressed`** | `BOOL` | `-` | Ẩn (Tag) | [Cờ báo trạng thái logic (Status)] 1 = Cảnh báo lỗi thiết bị chấp hành / cảm biến định lượng (Equipment Fault) hiện đang bị Ức chế (Suppressed) bởi chương trình PLC |
+| **`MRdy_Rel`** | `BOOL` | `-` | Ẩn (Tag) | [Cờ cho phép sáng nút nhấn trên HMI] 1 = Sẵn sàng nhận lệnh MCmd_Rel (Nhả quyền điều khiển (Release) để trả về chế độ Operator/Program), cho phép sáng nút nhấn tương ứng trên HMI Faceplate |
+| **`ORdy_Unlock`** | `BOOL` | `-` | Ẩn (Tag) | [Cờ cho phép sáng nút nhấn trên HMI] 1 = Sẵn sàng nhận lệnh OCmd_Unlock (Mở khóa nguồn lệnh hiện tại (cho phép chuyển đổi giữa Operator và Program)), cho phép sáng nút nhấn tương ứng trên HMI Faceplate |
+| **`P_Dose`** | `BOOL` | `-` | Ẩn (Tag) | Tham số định danh trùng tên khối AOI (P_Dose) dùng cho công cụ tự động dò tìm thẻ (Auto-discovery) của phần mềm HMI |
 
 ## 4. Bảng chi tiết 41 Biến Cấu Hình Cục Bộ (`Local Configuration Tags`) của `P_Dose`
 | Tên biến nội bộ (Local Tag) | Kiểu dữ liệu | Mặc định | Giải thích chức năng & Cách cấu hình hiển thị HMI |
 | :--- | :--- | :--- | :--- |
-| **`Cfg_Area`** | `STRING_Area` | `area01'` | [Biến cấu hình thông số] Process Area for security Read/Write |
-| **`Cfg_Desc`** | `STRING_40` | `Dosing with Weigh Scale or Flowmeter'` | [Biến cấu hình thông số] Description for display on HMI Read/Write |
-| **`Cfg_Label`** | `STRING_20` | `Dosing'` | [Biến cấu hình thông số] Label for graphic symbol displayed on HMI Read/Write |
-| **`Cfg_QtyEU`** | `STRING_8` | `'kg'` | [Biến cấu hình thông số] Engineering Units for Quantity for display on HMI Read/Write |
-| **`Cfg_RateEU`** | `STRING_8` | `'kg/sec'` | [Biến cấu hình thông số] Engineering Units for Rate (flow) for display on HMI Read/Write |
-| **`Cfg_Tag`** | `STRING_20` | `'P_Dose'` | [Biến cấu hình thông số] Tagname for display on HMI Read/Write |
-| **`CmdSrc`** | `P_CmdSrc` | `{...}` | Khối con P_CmdSrc quản lý lựa chọn nguồn lệnh điều khiển Read/Write |
-| **`EqpFault`** | `P_Alarm` | `{...}` | Equipment (Sensor, Controlled Equip.) Fault Alarm Read/Write |
-| **`HMI_Lib`** | `STRING_12` | `'RA-BAS'` | [Biến nội bộ giao diện HMI Faceplate] Tên thư viện màn hình đồ họa dùng để gọi cửa sổ HMI Faceplate Read Only |
-| **`HMI_Tab`** | `SINT` | `0` | [Biến nội bộ giao diện HMI Faceplate] Decimal Chỉ số tab hiển thị hiện hành (dùng cho màn hình FactoryTalk View ME) Read/Write |
-| **`HMI_Type`** | `STRING_16` | `'P_Dose'` | [Biến nội bộ giao diện HMI Faceplate] 'P_Dose' Chuỗi định danh kiểu khối AOI dùng cho điều hướng HMI và phần mềm thông tin Read Only |
-| **`OCmd_Bump`** | `BOOL` | `0` | [Lệnh từ màn hình HMI Operator] Lệnh từ Người vận hành (Operator HMI) để Bump Delivery for Under Tolerance Read/Write |
-| **`OCmd_CheckTol`** | `BOOL` | `0` | [Lệnh từ màn hình HMI Operator] Lệnh từ Người vận hành (Operator HMI) để Check Tolerances Read/Write |
-| **`OCmd_ClearTot`** | `BOOL` | `0` | [Lệnh từ màn hình HMI Operator] Lệnh từ Người vận hành (Operator HMI) để Clear Totalizer Qty Read/Write |
-| **`OCmd_Reset`** | `BOOL` | `0` | [Lệnh từ màn hình HMI Operator] Lệnh từ Người vận hành (Operator HMI) để Reset all Alarms requiring Reset Read/Write |
-| **`OCmd_ResetAckAll`** | `BOOL` | `0` | [Lệnh từ màn hình HMI Operator] Lệnh từ Người vận hành (Operator HMI) để Reset all Alarms and latched Shed conditions Read/Write |
-| **`OCmd_StartFlow`** | `BOOL` | `0` | [Lệnh từ màn hình HMI Operator] Lệnh từ Người vận hành (Operator HMI) để Start Deliver Read/Write |
-| **`OCmd_StartTot`** | `BOOL` | `0` | [Lệnh từ màn hình HMI Operator] Lệnh từ Người vận hành (Operator HMI) để Start Totalizer Read/Write |
-| **`OCmd_StopFlow`** | `BOOL` | `0` | [Lệnh từ màn hình HMI Operator] Lệnh từ Người vận hành (Operator HMI) để Stop/Pause Delivery Read/Write |
-| **`OCmd_StopTot`** | `BOOL` | `0` | [Lệnh từ màn hình HMI Operator] Lệnh từ Người vận hành (Operator HMI) để Stop Totalizer Read/Write |
-| **`ORdy_Bump`** | `BOOL` | `0` | [Cờ cho phép sáng nút nhấn trên HMI] 1 = Sẵn sàng nhận lệnh OCmd_Bump (cho phép sáng nút nhấn tương ứng trên HMI Faceplate) Read Only |
-| **`ORdy_CheckTol`** | `BOOL` | `0` | [Cờ cho phép sáng nút nhấn trên HMI] 1 = Sẵn sàng nhận lệnh OCmd_CheckTol (cho phép sáng nút nhấn tương ứng trên HMI Faceplate) Read Only |
-| **`ORdy_ClearTot`** | `BOOL` | `0` | [Cờ cho phép sáng nút nhấn trên HMI] 1 = Sẵn sàng nhận lệnh OCmd_ClearTot (cho phép sáng nút nhấn tương ứng trên HMI Faceplate) Read Only |
-| **`ORdy_DribPre`** | `BOOL` | `0` | [Cờ cho phép sáng nút nhấn trên HMI] 1 = Sẵn sàng nhận lệnh OSet_DribbleQty and OSet_Preact (enables HMI entry fields) Read Only |
-| **`ORdy_Reset`** | `BOOL` | `0` | [Cờ cho phép sáng nút nhấn trên HMI] 1 = Sẵn sàng nhận lệnh OCmd_Reset (cho phép sáng nút nhấn tương ứng trên HMI Faceplate) Read Only |
-| **`ORdy_ResetAckAll`** | `BOOL` | `0` | [Cờ cho phép sáng nút nhấn trên HMI] 1 = Sẵn sàng nhận lệnh OCmd_ResetAckAll (cho phép sáng nút nhấn tương ứng trên HMI Faceplate) Read Only |
-| **`ORdy_SP`** | `BOOL` | `0` | [Cờ cho phép sáng nút nhấn trên HMI] 1 = Sẵn sàng nhận lệnh OSet_SP (enables HMI entry field) Read Only |
-| **`ORdy_StartFlow`** | `BOOL` | `0` | [Cờ cho phép sáng nút nhấn trên HMI] 1 = Sẵn sàng nhận lệnh OCmd_StartFlow (cho phép sáng nút nhấn tương ứng trên HMI Faceplate) Read Only |
-| **`ORdy_StartTot`** | `BOOL` | `0` | [Cờ cho phép sáng nút nhấn trên HMI] 1 = Sẵn sàng nhận lệnh OCmd_StartTot (cho phép sáng nút nhấn tương ứng trên HMI Faceplate) Read Only |
-| **`ORdy_StopFlow`** | `BOOL` | `0` | [Cờ cho phép sáng nút nhấn trên HMI] 1 = Sẵn sàng nhận lệnh OCmd_StopFlow (cho phép sáng nút nhấn tương ứng trên HMI Faceplate) Read Only |
-| **`ORdy_StopTot`** | `BOOL` | `0` | [Cờ cho phép sáng nút nhấn trên HMI] 1 = Sẵn sàng nhận lệnh OCmd_StopTot (cho phép sáng nút nhấn tương ứng trên HMI Faceplate) Read Only |
-| **`ORdy_Tol`** | `BOOL` | `0` | [Cờ cho phép sáng nút nhấn trên HMI] 1 = Sẵn sàng nhận lệnh OSetTolHi, OSet_TolLo (enables HMI entry fields) Read Only |
-| **`OSet_DribbleQty`** | `REAL` | `0` | [Giá trị đặt từ màn hình HMI Operator] Operator Setting of quantity to dribble (EU) Read/Write |
-| **`OSet_Preact`** | `REAL` | `0` | [Giá trị đặt từ màn hình HMI Operator] Operator Setting of amount before total to stop flow (EU) Read/Write |
-| **`OSet_SP`** | `REAL` | `0` | [Giá trị đặt từ màn hình HMI Operator] Operator Setting of total quantity to deliver (EU) Read/Write |
-| **`OSet_TolHi`** | `REAL` | `0` | [Giá trị đặt từ màn hình HMI Operator] Operator Setting of High Tolerance Limit (OK amount > SP) Read/Write |
-| **`OSet_TolLo`** | `REAL` | `0` | [Giá trị đặt từ màn hình HMI Operator] Operator Setting of Low Tolerance Limit (OK amount < SP) Read/Write |
-| **`OverTol`** | `P_Alarm` | `{...}` | Quantity Above High Tolerance Alarm Read/Write |
-| **`UnderTol`** | `P_Alarm` | `{...}` | Quantity Below Low Tolerance Alarm Read/Write |
-| **`Val_Notify`** | `SINT` | `0` | [Giá trị thực tế đầu ra (Logic/HMI)] Mã mức độ cảnh báo hiện tại và trạng thái xác nhận (0=Không lỗi, 2..9=Low..Urgent) Read Only |
-| **`ZeroFault`** | `P_Alarm` | `{...}` | Not Zero when Expected Alarm Read/Write |
+| **`Cfg_Area`** | `STRING_Area` | `area01'` | [Biến cấu hình thông số] Tên phân khu công nghệ (Process Area, ví dụ: "area01") dùng để phân quyền bảo mật thao tác trên HMI |
+| **`Cfg_Desc`** | `STRING_40` | `Dosing with Weigh Scale or Flowmeter'` | [Biến cấu hình thông số] Chuỗi mô tả tên thiết bị/điểm đo hiển thị trên thanh tiêu đề của cửa sổ HMI Faceplate (tối đa 40 ký tự) |
+| **`Cfg_Label`** | `STRING_20` | `Dosing'` | [Biến cấu hình thông số] Nhãn tên ngắn gọn hiển thị bên cạnh biểu tượng đồ họa (Graphic Symbol) trên màn hình SCADA/HMI (tối đa 20 ký tự) |
+| **`Cfg_QtyEU`** | `STRING_8` | `'kg'` | [Biến cấu hình thông số] Chuỗi đơn vị kỹ thuật của tổng khối lượng/thể tích mẻ định lượng (ví dụ: "kg", "L") hiển thị trên HMI |
+| **`Cfg_RateEU`** | `STRING_8` | `'kg/sec'` | [Biến cấu hình thông số] Chuỗi đơn vị kỹ thuật của lưu lượng nạp tức thời (ví dụ: "kg/min", "L/s") hiển thị trên HMI |
+| **`Cfg_Tag`** | `STRING_20` | `'P_Dose'` | [Biến cấu hình thông số] Tên thẻ định danh (Tagname) của thiết bị hiển thị trên thanh tiêu đề cửa sổ HMI Faceplate (tối đa 20 ký tự) |
+| **`CmdSrc`** | `P_CmdSrc` | `{...}` | Khối con P_CmdSrc nội bộ quản lý phân quyền và chuyển mạch giữa 7 nguồn lệnh điều khiển (OoS, Hand, Maint, Ovrd, Ext, Prog, Oper) |
+| **`EqpFault`** | `P_Alarm` | `{...}` | [Khối con P_Alarm nội bộ] Quản lý toàn bộ vòng đời cảnh báo cho lỗi thiết bị chấp hành / cảm biến định lượng (Equipment Fault) |
+| **`HMI_Lib`** | `STRING_12` | `'RA-BAS'` | Tên thư viện màn hình đồ họa (ví dụ: "RA-BAS") dùng để gọi cửa sổ HMI Faceplate |
+| **`HMI_Tab`** | `SINT` | `0` | Chỉ số Tab hiển thị hiện hành trên cửa sổ Faceplate (dùng cho màn hình FactoryTalk View ME) |
+| **`HMI_Type`** | `STRING_16` | `'P_Dose'` | Chuỗi định danh kiểu khối AOI dùng cho điều hướng HMI Faceplate và phần mềm thông tin |
+| **`OCmd_Bump`** | `BOOL` | `0` | [Lệnh từ màn hình HMI Operator] Lệnh từ Người vận hành (Operator HMI) để Nhấp bù thêm một lượng nhỏ nguyên liệu (Bump Delivery) khi mẻ nạp bị thiếu dưới dung sai |
+| **`OCmd_CheckTol`** | `BOOL` | `0` | [Lệnh từ màn hình HMI Operator] Lệnh từ Người vận hành (Operator HMI) để Thực hiện kiểm tra dung sai mẻ nạp (Check Tolerances) |
+| **`OCmd_ClearTot`** | `BOOL` | `0` | [Lệnh từ màn hình HMI Operator] Lệnh từ Người vận hành (Operator HMI) để Xóa bộ đếm tổng lưu lượng/khối lượng tích lũy (Clear Totalizer) về 0 |
+| **`OCmd_Reset`** | `BOOL` | `0` | [Lệnh từ màn hình HMI Operator] Lệnh từ Người vận hành (Operator HMI) để Xóa (Reset) tất cả các chốt lỗi ngắt tải (Shed latches) và các cảnh báo đã hết điều kiện lỗi |
+| **`OCmd_ResetAckAll`** | `BOOL` | `0` | [Lệnh từ màn hình HMI Operator] Lệnh từ Người vận hành (Operator HMI) để Xóa (Reset) mọi chốt lỗi và đồng thời Xác nhận (Acknowledge) toàn bộ cảnh báo |
+| **`OCmd_StartFlow`** | `BOOL` | `0` | [Lệnh từ màn hình HMI Operator] Lệnh từ Người vận hành (Operator HMI) để Bắt đầu chu trình nạp/định lượng mẻ nguyên liệu (Start Delivery) |
+| **`OCmd_StartTot`** | `BOOL` | `0` | [Lệnh từ màn hình HMI Operator] Lệnh từ Người vận hành (Operator HMI) để Bắt đầu chạy bộ đếm tổng tích lũy (Start Totalizer) |
+| **`OCmd_StopFlow`** | `BOOL` | `0` | [Lệnh từ màn hình HMI Operator] Lệnh từ Người vận hành (Operator HMI) để Dừng hoặc tạm dừng chu trình nạp/định lượng mẻ (Stop/Pause Delivery) |
+| **`OCmd_StopTot`** | `BOOL` | `0` | [Lệnh từ màn hình HMI Operator] Lệnh từ Người vận hành (Operator HMI) để Dừng bộ đếm tổng tích lũy (Stop Totalizer) |
+| **`ORdy_Bump`** | `BOOL` | `0` | [Cờ cho phép sáng nút nhấn trên HMI] 1 = Sẵn sàng nhận lệnh OCmd_Bump (Nhấp bù thêm một lượng nhỏ nguyên liệu (Bump Delivery) khi mẻ nạp bị thiếu dưới dung sai), cho phép sáng nút nhấn tương ứng trên HMI Faceplate |
+| **`ORdy_CheckTol`** | `BOOL` | `0` | [Cờ cho phép sáng nút nhấn trên HMI] 1 = Sẵn sàng nhận lệnh OCmd_CheckTol (Thực hiện kiểm tra dung sai mẻ nạp (Check Tolerances)), cho phép sáng nút nhấn tương ứng trên HMI Faceplate |
+| **`ORdy_ClearTot`** | `BOOL` | `0` | [Cờ cho phép sáng nút nhấn trên HMI] 1 = Sẵn sàng nhận lệnh OCmd_ClearTot (Xóa bộ đếm tổng lưu lượng/khối lượng tích lũy (Clear Totalizer) về 0), cho phép sáng nút nhấn tương ứng trên HMI Faceplate |
+| **`ORdy_DribPre`** | `BOOL` | `0` | [Cờ cho phép nhập dữ liệu trên HMI] 1 = Sẵn sàng nhận giá trị đặt OSet_DribbleQty và OSet_Preact (cho phép mở ô nhập trên HMI Faceplate) |
+| **`ORdy_Reset`** | `BOOL` | `0` | [Cờ cho phép sáng nút nhấn trên HMI] 1 = Sẵn sàng nhận lệnh OCmd_Reset (Xóa (Reset) tất cả các chốt lỗi ngắt tải (Shed latches) và các cảnh báo đã hết điều kiện lỗi), cho phép sáng nút nhấn tương ứng trên HMI Faceplate |
+| **`ORdy_ResetAckAll`** | `BOOL` | `0` | [Cờ cho phép sáng nút nhấn trên HMI] 1 = Sẵn sàng nhận lệnh OCmd_ResetAckAll (Xóa (Reset) mọi chốt lỗi và đồng thời Xác nhận (Acknowledge) toàn bộ cảnh báo), cho phép sáng nút nhấn tương ứng trên HMI Faceplate |
+| **`ORdy_SP`** | `BOOL` | `0` | [Cờ cho phép nhập dữ liệu trên HMI] 1 = Sẵn sàng nhận giá trị đặt OSet_SP (Giá trị đặt chính (Setpoint - SP, tính theo đơn vị kỹ thuật PV EU) khi chạy chế độ Tự động (Auto)), cho phép mở ô nhập số trên HMI Faceplate |
+| **`ORdy_StartFlow`** | `BOOL` | `0` | [Cờ cho phép sáng nút nhấn trên HMI] 1 = Sẵn sàng nhận lệnh OCmd_StartFlow (Bắt đầu chu trình nạp/định lượng mẻ nguyên liệu (Start Delivery)), cho phép sáng nút nhấn tương ứng trên HMI Faceplate |
+| **`ORdy_StartTot`** | `BOOL` | `0` | [Cờ cho phép sáng nút nhấn trên HMI] 1 = Sẵn sàng nhận lệnh OCmd_StartTot (Bắt đầu chạy bộ đếm tổng tích lũy (Start Totalizer)), cho phép sáng nút nhấn tương ứng trên HMI Faceplate |
+| **`ORdy_StopFlow`** | `BOOL` | `0` | [Cờ cho phép sáng nút nhấn trên HMI] 1 = Sẵn sàng nhận lệnh OCmd_StopFlow (Dừng hoặc tạm dừng chu trình nạp/định lượng mẻ (Stop/Pause Delivery)), cho phép sáng nút nhấn tương ứng trên HMI Faceplate |
+| **`ORdy_StopTot`** | `BOOL` | `0` | [Cờ cho phép sáng nút nhấn trên HMI] 1 = Sẵn sàng nhận lệnh OCmd_StopTot (Dừng bộ đếm tổng tích lũy (Stop Totalizer)), cho phép sáng nút nhấn tương ứng trên HMI Faceplate |
+| **`ORdy_Tol`** | `BOOL` | `0` | [Cờ cho phép nhập dữ liệu trên HMI] 1 = Sẵn sàng nhận giá trị đặt dung sai OSet_TolHi và OSet_TolLo (cho phép mở ô nhập trên HMI Faceplate) |
+| **`OSet_DribbleQty`** | `REAL` | `0` | [Giá trị đặt từ Người vận hành HMI] Giá trị đặt từ Người vận hành (Operator HMI): Lượng nguyên liệu chuyển sang chạy nạp tinh tốc độ chậm ở cuối mẻ (Dribble Quantity, đơn vị EU) |
+| **`OSet_Preact`** | `REAL` | `0` | [Giá trị đặt từ Người vận hành HMI] Giá trị đặt từ Người vận hành (Operator HMI): Lượng nguyên liệu ngắt sớm trước khi đạt tổng mẻ để bù lượng còn rơi trên đường ống (Pre-Act, đơn vị EU) |
+| **`OSet_SP`** | `REAL` | `0` | [Giá trị đặt từ Người vận hành HMI] Giá trị đặt từ Người vận hành (Operator HMI): Giá trị đặt chính (Setpoint - SP, tính theo đơn vị kỹ thuật PV EU) khi chạy chế độ Tự động (Auto) |
+| **`OSet_TolHi`** | `REAL` | `0` | [Giá trị đặt từ Người vận hành HMI] Giá trị đặt từ Người vận hành (Operator HMI): Giới hạn dung sai trên cho phép vượt quá giá trị đặt SP của mẻ nạp (High Tolerance Limit, đơn vị EU) |
+| **`OSet_TolLo`** | `REAL` | `0` | [Giá trị đặt từ Người vận hành HMI] Giá trị đặt từ Người vận hành (Operator HMI): Giới hạn dung sai dưới cho phép thấp hơn giá trị đặt SP của mẻ nạp (Low Tolerance Limit, đơn vị EU) |
+| **`OverTol`** | `P_Alarm` | `{...}` | [Khối con P_Alarm nội bộ] Quản lý toàn bộ vòng đời cảnh báo cho khối lượng/lưu lượng mẻ vượt dung sai trên (Over Tolerance) |
+| **`UnderTol`** | `P_Alarm` | `{...}` | [Khối con P_Alarm nội bộ] Quản lý toàn bộ vòng đời cảnh báo cho khối lượng/lưu lượng mẻ hụt dung sai dưới (Under Tolerance) |
+| **`Val_Notify`** | `SINT` | `0` | [Giá trị thực tế đầu ra (Logic/HMI)] Mã mức độ ưu tiên cảnh báo hiện hành và trạng thái xác nhận của khối này (0 = Không có cảnh báo, 1 = Đã hết lỗi nhưng chờ Reset/Ack, 2..3 = Thấp, 4..5 = Trung bình, 6..7 = Cao, 8..9 = Khẩn cấp) |
+| **`ZeroFault`** | `P_Alarm` | `{...}` | [Khối con P_Alarm nội bộ] Quản lý toàn bộ vòng đời cảnh báo cho lỗi điểm 0 không xóa được hoặc có dòng chảy bất thường (Zero Fault) |

@@ -1,465 +1,463 @@
 # CHI TIẾT TOÀN BỘ BIẾN, CÁCH SỬ DỤNG & CẤU HÌNH KHỐI `P_PIDE`
-**Thuộc chương:** Chương 2: Điều khiển Điều tiết & Quy trình (Regulatory & Procedural Control)  
-**Nguồn dữ liệu gốc:** Bảng thông số kỹ thuật `Regulatory_Procedural Control 4.1.xlsx` đính kèm trong `PROCES-RM013I-EN-P`  
+**Thuộc chương:** [Chương 2: Điều khiển Điều tiết & Quy trình (Regulatory & Procedural Control)](../02_CHUONG_2_REGULATORY_PROCEDURAL_CONTROL.md)  
+**Nguồn dữ liệu gốc:** Bảng thông số kỹ thuật `Regulatory_Procedural Control 4.1.xlsx` đính kèm trong ấn phẩm `PROCES-RM013I-EN-P` (Trang 79–83)  
+**Tệp định nghĩa khối lệnh:** `P_PIDE_4.10.00_AOI.L5X`  
 **Thống kê số lượng biến của `P_PIDE`:** **218** Biến đầu vào (`Input Parameters`) | **149** Biến đầu ra (`Output Parameters`) | **59** Biến cấu hình cục bộ (`Local Configuration Tags`)
 
-> **⚡ Truy cập nhanh:** [⬅ Quay lại `README.md` (Thư mục gốc)](../README.md) | [⬅ Danh mục Tra cứu Nhanh (`00_GIOI_THIEU_VA_TRA_CUU_NHANH_AOI.md`)](./00_GIOI_THIEU_VA_TRA_CUU_NHANH_AOI.md)
+## 1. Tổng quan Chức năng & Hướng dẫn Tích hợp Khối `P_PIDE` trong Studio 5000
+- **Chức năng cốt lõi:** Khối điều khiển vòng kín **PID nâng cao** chuẩn PlantPAx (bao bọc lệnh `PIDE` của Logix). Hỗ trợ điều khiển Đơn vòng, Tầng (**Cascade**), Tỷ lệ (**Ratio**), Bù nhiễu tiến cử (**Feedforward**), Tự động dò thông số (**Autotune**), 4 cảnh báo sai lệch (`HiHiDev`..`LoLoDev`), Setpoint Ramping và cưỡng bức CV về giá trị an toàn khi mất liên động.
+- **Khi nào CẦN sử dụng:** Cho **mọi bài toán điều khiển liên tục (Continuous Control)** cần giữ ổn định Nhiệt độ, Áp suất, Lưu lượng, Mức bồn, pH, Oxy hòa tan bằng van tuyến tính hoặc biến tần.
+- **Khi nào KHÔNG sử dụng (Khối thay thế):** Khi điều khiển đóng/ngắt 2 vị trí theo khoảng trễ (như bơm hố thu) → Dùng [`P_DBC.md`](./P_DBC.md).
 
-## 0. Giới thiệu chung & Các nhu cầu cần dùng khối `P_PIDE`
-- **Tệp định nghĩa khối lệnh (`.L5X`):** `P_PIDE_4.10.00_AOI.L5X` *(Trang 79–83 trong tài liệu gốc PROCES-RM013I-EN-P)*
-- **Giới thiệu chung chức năng:** Khối điều khiển vòng kín **PID nâng cao** chuẩn PlantPAx (bao bọc lệnh `PIDE` của Logix). Hỗ trợ điều khiển Đơn vòng, Tầng (**Cascade**), Tỷ lệ (**Ratio**), Bù nhiễu tiến cử (**Feedforward**), Tự động dò thông số (**Autotune**), 4 cảnh báo sai lệch (`HiHiDev`..`LoLoDev`), Setpoint Ramping và cưỡng bức CV về giá trị an toàn khi mất liên động.
-- **Các nhu cầu thực tế CẦN dùng khối `P_PIDE`:** Cho **mọi bài toán điều khiển liên tục (Continuous Control)** cần giữ ổn định Nhiệt độ, Áp suất, Lưu lượng, Mức bồn, pH, Oxy hòa tan bằng van tuyến tính hoặc biến tần.
-- **Trường hợp KHÔNG dùng & Khối thay thế:** Khi điều khiển đóng/ngắt 2 vị trí theo khoảng trễ (như bơm hố thu) → Dùng [`P_DBC.md`](./P_DBC.md).
-
-## 1. Hướng dẫn Cách sử dụng, Đấu nối chân & Cấu hình các biến trong `P_PIDE`
+### Quy trình 4 bước đấu nối và cấu hình `P_PIDE`:
 1. **Các chân đầu vào cần nối dây tín hiệu (`Inp_*` / Chân hiển thị trên khối FBD/Ladder):**
-   - Các biến tiêu biểu: `Inp_PV`, `Inp_CascSP`, `Inp_FF`, `Inp_FFPrev`, `Inp_CVInitVal`, `Inp_CVPrev`, `Inp_UseFFPrev`, `Inp_UseCVInitVal`, `Inp_UseCVPrev`, `Inp_WindupHi`, `Inp_WindupLo`, `Inp_PVBad`, `Inp_PVUncertain`, `Inp_CVIOFault`, `Inp_PVSrcQ`, `Inp_PVNotify`, `Inp_CVNotify`, `Inp_CascSPNotify`...
-   - **Cách đấu nối:** Nối trực tiếp từ thẻ I/O vật lý (ví dụ `Local:1:I.Ch0Data`, `Local:2:I.Data.0`) hoặc từ ngõ ra trạng thái của các khối liên kết (`P_Intlk.Sts_IntlkOK`, `P_Perm.Sts_PermOK`, `P_AIChan.SrcQ`).
+   - **Các biến đầu vào tiêu biểu:** `Inp_PV`, `Inp_CascSP`, `Inp_FF`, `Inp_FFPrev`, `Inp_CVInitVal`, `Inp_CVPrev`, `Inp_UseFFPrev`, `Inp_UseCVInitVal`, `Inp_UseCVPrev`, `Inp_WindupHi`, `Inp_WindupLo`, `Inp_PVBad`, `Inp_PVUncertain`, `Inp_CVIOFault`, `Inp_PVSrcQ`
+   - **Cách đấu nối:** Nối trực tiếp các chân `Inp_*` với thẻ I/O vật lý hoặc các cờ trạng thái từ khối liên kết (`P_Intlk.Sts_IntlkOK`, `P_Perm.Sts_PermOK`, `P_AIChan.SrcQ`). Khi chạy thử nghiệm phần mềm không có phần cứng thật, đặt `Inp_Sim = 1` để kích hoạt chế độ mô phỏng nội bộ.
 2. **Cách cấu hình các biến thiết lập (`Cfg_*` và `Local Configuration Tags`):**
-   - Các biến `Cfg_*` trong Input Parameters: `Cfg_HasMoreObj`, `Cfg_HasRatio`, `Cfg_HasCasc`, `Cfg_HasAuto`, `Cfg_HasMan`, `Cfg_HasSPRamp`, `Cfg_LockLM`, `Cfg_PVTrack`, `Cfg_CtrlAction`, `Cfg_Depend`, `Cfg_DerivSmooth`, `Cfg_ZCOff`, `Cfg_PropSPAct`, `Cfg_DerivSPAct`, `Cfg_LimitManCV`, `Cfg_InitToMan`, `Cfg_SetTrack`, `Cfg_SetTrackOvrdHand`...
-   - Các biến `Cfg_*` trong Local Tags (hiển thị HMI): `Cfg_Area`, `Cfg_CascSPNavTag`, `Cfg_CVEU`, `Cfg_CVNavTag`, `Cfg_Desc`, `Cfg_Label`, `Cfg_PVEU`, `Cfg_PVNavTag`, `Cfg_Tag`
-   - **Cách cấu hình:** Trong phần mềm **Studio 5000 Logix Designer**, nhấp chuột phải vào thẻ khối lệnh -> chọn **Monitor Tags** (hoặc mở tab **Engineering / Maintenance** trên cửa sổ HMI Faceplate khi đang chạy Online) để nhập giá trị dải đo, giới hạn cảnh báo, thời gian trễ và bật các tính năng phần cứng (`Cfg_Has* = 1`, `Cfg_Use* = 1`). Lưu ý kiểm tra cờ `Sts_Err = 0` sau khi cấu hình để đảm bảo không có thông số nào bị nhập sai.
+   - **Biến `Cfg_*` trong Input Parameters:** `Cfg_HasMoreObj`, `Cfg_HasRatio`, `Cfg_HasCasc`, `Cfg_HasAuto`, `Cfg_HasMan`, `Cfg_HasSPRamp`, `Cfg_LockLM`, `Cfg_PVTrack`, `Cfg_CtrlAction`, `Cfg_Depend`, `Cfg_DerivSmooth`, `Cfg_ZCOff`, `Cfg_PropSPAct`, `Cfg_DerivSPAct`, `Cfg_LimitManCV`, `Cfg_InitToMan`, `Cfg_SetTrack`, `Cfg_SetTrackOvrdHand`...
+   - **Biến `Cfg_*` trong Local Tags (hiển thị HMI):** `Cfg_Area`, `Cfg_CascSPNavTag`, `Cfg_CVEU`, `Cfg_CVNavTag`, `Cfg_Desc`, `Cfg_Label`, `Cfg_PVEU`, `Cfg_PVNavTag`, `Cfg_Tag`
+   - **Cách cấu hình:** Trong phần mềm **Studio 5000 Logix Designer**, nhấp chuột phải vào thẻ khối `P_PIDE` -> chọn **Monitor Tags** (hoặc mở tab **Engineering / Maintenance** trên HMI Faceplate khi đang chạy Online) để cài đặt dải đo, giới hạn cảnh báo, thời gian trễ và bật các tính năng phần cứng (`Cfg_Has* = 1`, `Cfg_Use* = 1`). Sau khi cấu hình, luôn kiểm tra cờ `Sts_Err = 0` để chắc chắn không có thông số nào cài đặt sai phạm vi.
 3. **Cách điều khiển khối `P_PIDE` từ Chương trình tự động (`PCmd_*` và `PSet_*`):**
-   - Các biến lệnh & giá trị đặt Program: `PSet_Ratio`, `PSet_SP`, `PSet_SPRoCLimInc`, `PSet_SPRoCLimDec`, `PSet_SPTarget`, `PSet_SPRampT`, `PSet_CV`, `PSet_Owner`, `PCmd_Casc`, `PCmd_Auto`, `PCmd_Man`, `PCmd_NormLM`, `PCmd_SPRampStart`, `PCmd_SPRampStop`, `PCmd_Prog`, `PCmd_Oper`, `PCmd_Lock`, `PCmd_Unlock`...
-   - **Cách sử dụng trong code PLC:** Trước khi gửi lệnh tự động, kiểm tra khối đang ở chế độ **Program** (`Sts_Prog = 1` hoặc `Sts_Available = 1`). Nếu đang ở chế độ Operator, kích xung `PCmd_Prog = 1` (hoặc `PCmd_Acq = 1`) để chuyển sang Program, sau đó gán giá trị vào `PSet_*` và kích bit `PCmd_* = 1` (khối sẽ tự xóa bit `PCmd_*` về 0 sau khi nhận lệnh).
+   - **Các biến lệnh & giá trị đặt Program:** `PSet_Ratio`, `PSet_SP`, `PSet_SPRoCLimInc`, `PSet_SPRoCLimDec`, `PSet_SPTarget`, `PSet_SPRampT`, `PSet_CV`, `PSet_Owner`, `PCmd_Casc`, `PCmd_Auto`, `PCmd_Man`, `PCmd_NormLM`, `PCmd_SPRampStart`, `PCmd_SPRampStop`, `PCmd_Prog`, `PCmd_Oper`, `PCmd_Lock`, `PCmd_Unlock`...
+   - **Cách sử dụng trong code PLC:** Trước khi gửi lệnh điều khiển tự động, kiểm tra khối đã sẵn sàng ở chế độ **Program** (`Sts_Prog = 1` hoặc `Sts_Available = 1`). Nếu đang ở chế độ Operator, kích xung `PCmd_Prog = 1` (hoặc `PCmd_Acq = 1`) để chuyển quyền về Program, sau đó gán giá trị vào `PSet_*` và kích xung `PCmd_* = 1` (khối sẽ tự động xóa bit `PCmd_*` về 0 sau khi thực thi).
 4. **Cách đọc Giá trị, Trạng thái và Cảnh báo (`Out_*`, `Val_*`, `Sts_*`, `Alm_*`):**
-   - Các biến đầu ra tiêu biểu: `Out_CV`, `Val_PV`, `Val_Ratio`, `Val_SPSet`, `Val_SP`, `Val_SPTarget`, `Val_SPRampT`, `Val_SPRampRoC`, `Val_SPRoCInc`, `Val_SPRoCDec`, `Val_E`, `Val_CVSet`, `Val_CVOut`, `Val_PVPercent`, `Val_SPPercent`, `Val_EPercent`, `Val_CVPercent`, `Val_ActExecT`...
-   - **Cách sử dụng:** Nối chân `Out_*` ra thẻ Output vật lý. Sử dụng các bit `Sts_*` (trạng thái thực tế) để đưa vào khối liên động `P_Intlk` / `P_Perm` hoặc điều kiện chuyển bước `P_Seq`. Sử dụng các bit `Alm_*` để kích hoạt còi/đèn báo động.
+   - **Các biến đầu ra tiêu biểu:** `Out_CV`, `Val_PV`, `Val_Ratio`, `Val_SPSet`, `Val_SP`, `Val_SPTarget`, `Val_SPRampT`, `Val_SPRampRoC`, `Val_SPRoCInc`, `Val_SPRoCDec`, `Val_E`, `Val_CVSet`, `Val_CVOut`, `Val_PVPercent`, `Val_SPPercent`, `Val_EPercent`, `Val_CVPercent`, `Val_ActExecT`...
+   - **Cách sử dụng:** Nối các chân `Out_*` ra thẻ Output vật lý hoặc khối chức năng phía sau. Sử dụng các cờ trạng thái thực tế `Sts_*` (như `Sts_Running`, `Sts_Opened`, `Sts_IntlkOK`, `Sts_HiHiCmp`...) để đưa vào khối liên động `P_Intlk` / `P_Perm` hoặc điều kiện chuyển bước `P_Seq`. Sử dụng các cờ `Alm_*` và `Val_Notify` để cảnh báo trên HMI hoặc kích hoạt còi/đèn báo động.
 
 ## 2. Bảng chi tiết 218 Biến Đầu Vào (`Input Parameters`) của `P_PIDE`
 | Tên biến (Input Parameter) | Kiểu dữ liệu | Mặc định | Hiển thị chân | Giải thích chức năng, Cách sử dụng & Cấu hình chi tiết |
 | :--- | :--- | :--- | :--- | :--- |
-| **`EnableIn`** | `BOOL` | `1` | Ẩn (Tag) | [Chân kích hoạt Rung] Chân cho phép thực thi khối AOI: Trong Ladder (LD), nếu nhánh Rung = True thì chạy chương trình chính (Logic routine), nếu Rung = False thì chạy chương trình xử lý khi ngắt (EnableInFalse routine). Trong FBD, nếu bằng 1 hoặc không nối dây thì khối hoạt động bình thường. |
-| **`Inp_PV`** | `REAL` | `0` | Hiện (Pin) | [Đầu vào nối dây I/O hoặc Logic] Input signal Process Variable (PV) from sensor (PV engineering units). |
-| **`Inp_CascSP`** | `REAL` | `0` | Hiện (Pin) | [Đầu vào nối dây I/O hoặc Logic] Setpoint in cascade, independent PV in Ratio (PV engineering units). |
-| **`Inp_FF`** | `REAL` | `0` | Ẩn (Tag) | [Đầu vào nối dây I/O hoặc Logic] FeedForward term (CVEU) |
-| **`Inp_FFPrev`** | `REAL` | `0` | Ẩn (Tag) | [Đầu vào nối dây I/O hoặc Logic] FF feedback from downstream block (CVEU) |
-| **`Inp_CVInitVal`** | `REAL` | `0` | Ẩn (Tag) | [Đầu vào nối dây I/O hoặc Logic] Value to initialize the CV to when requested (CV engineering units). |
-| **`Inp_CVPrev`** | `REAL` | `0` | Ẩn (Tag) | [Đầu vào nối dây I/O hoặc Logic] CV Feedback from downstream block (CVEU) |
-| **`Inp_UseFFPrev`** | `BOOL` | `0` | Ẩn (Tag) | [Đầu vào nối dây I/O hoặc Logic] 1=Use Inp_FFPrev as previous FF value, 0=Use last scan value |
-| **`Inp_UseCVInitVal`** | `BOOL` | `0` | Ẩn (Tag) | [Đầu vào nối dây I/O hoặc Logic] 1=Initialize CV to Inp_CVInitValue |
-| **`Inp_UseCVPrev`** | `BOOL` | `0` | Ẩn (Tag) | [Đầu vào nối dây I/O hoặc Logic] 1=Use Inp_CVPrev as previous CV value, 0=Use last scan value |
-| **`Inp_WindupHi`** | `BOOL` | `0` | Ẩn (Tag) | [Đầu vào nối dây I/O hoặc Logic] Windup High Signal 1=regulator will not increase the output. |
-| **`Inp_WindupLo`** | `BOOL` | `0` | Ẩn (Tag) | [Đầu vào nối dây I/O hoặc Logic] Windup Low Signal 1=regulator will not decrease the output. |
-| **`Inp_PVBad`** | `BOOL` | `0` | Ẩn (Tag) | [Đầu vào nối dây I/O hoặc Logic] Bad signal quality/communication status for inputs (1 = Bad, 0 = OK). If PV is read from an analog input, then this is normally read from the analog input channel fault status. |
-| **`Inp_PVUncertain`** | `BOOL` | `0` | Ẩn (Tag) | [Đầu vào nối dây I/O hoặc Logic] Uncertain quality for inputs (1 = Uncertain, 0 = OK). This is optional status for the input that can be used to drive the status of the output (Sts_PVUncertain). |
-| **`Inp_CVIOFault`** | `BOOL` | `0` | Ẩn (Tag) | [Đầu vào nối dây I/O hoặc Logic] 1=CV I/O Comms Status Bad, 0=OK |
-| **`Inp_PVSrcQ`** | `DINT` | `0` | Ẩn (Tag) | [Đầu vào nối dây I/O hoặc Logic] Source and Quality of Inp_PV (enum) |
-| **`Inp_PVNotify`** | `DINT` | `0` | Ẩn (Tag) | [Đầu vào nối dây I/O hoặc Logic] PV Alarm Level and Acknowledgement (enum) |
-| **`Inp_CVNotify`** | `DINT` | `0` | Ẩn (Tag) | [Đầu vào nối dây I/O hoặc Logic] CV Alarm Level and Acknowledgement (enum) |
-| **`Inp_CascSPNotify`** | `DINT` | `0` | Ẩn (Tag) | [Đầu vào nối dây I/O hoặc Logic] Cascase SP Alarm Level and Acknowledgement (enum) |
-| **`Inp_IntlkOK`** | `BOOL` | `1` | Hiện (Pin) | [Đầu vào nối dây I/O hoặc Logic] 1=Interlocks OK, Analog Output can be set |
-| **`Inp_NBIntlkOK`** | `BOOL` | `1` | Hiện (Pin) | [Đầu vào nối dây I/O hoặc Logic] 1=Non-Bypassable Interlocks OK, Analog Output can be set |
-| **`Inp_Hand`** | `BOOL` | `0` | Hiện (Pin) | [Đầu vào nối dây I/O hoặc Logic] 1=Select Hand (hardwired) Control Strategy |
-| **`Inp_HandFdbk`** | `REAL` | `0` | Ẩn (Tag) | [Đầu vào nối dây I/O hoặc Logic] CV Feedback used in Hand Mode (CVEU) |
-| **`Inp_HandFdbkBad`** | `BOOL` | `0` | Ẩn (Tag) | [Đầu vào nối dây I/O hoặc Logic] 1=Inp_HandFdbk input quality or I/O Comms Status Bad, 0=OK |
-| **`Inp_Ovrd`** | `BOOL` | `0` | Ẩn (Tag) | [Đầu vào nối dây I/O hoặc Logic] 1=Select Override control strategy |
-| **`Inp_OvrdCmd`** | `DINT` | `0` | Ẩn (Tag) | [Đầu vào nối dây I/O hoặc Logic] Override Loop Mode Command 0=None, 1=Man, 2=Auto, 3=Casc, 4=Norm |
-| **`Inp_OvrdRatio`** | `REAL` | `1` | Ẩn (Tag) | [Đầu vào nối dây I/O hoặc Logic] Loop Ratio in Override Mode (unitless) |
-| **`Inp_OvrdSP`** | `REAL` | `0` | Ẩn (Tag) | [Đầu vào nối dây I/O hoặc Logic] Loop Auto Setpoint (SP) in Override Mode (PVEU) |
-| **`Inp_OvrdCV`** | `REAL` | `0` | Ẩn (Tag) | [Đầu vào nối dây I/O hoặc Logic] Loop Manual Output (CV) in Override Mode (CVEU) |
-| **`Inp_OvrdSPTarget`** | `REAL` | `0` | Ẩn (Tag) | [Đầu vào nối dây I/O hoặc Logic] Override Mode Setpoint Target for SP Ramping ('wizard') |
-| **`Inp_OvrdSPRampT`** | `REAL` | `0` | Ẩn (Tag) | [Đầu vào nối dây I/O hoặc Logic] Override Setpoint Ramp Time for SP Ramping ('wizard') (sec). Valid = 0.0 to 28800.0 seconds. |
-| **`Inp_OvrdSPRoCLimInc`** | `REAL` | `0` | Ẩn (Tag) | [Đầu vào nối dây I/O hoặc Logic] Override Setting for Setpoint Positive Rate of Change Limit (PVEU/sec) |
-| **`Inp_OvrdSPRoCLimDec`** | `REAL` | `0` | Ẩn (Tag) | [Đầu vào nối dây I/O hoặc Logic] Override Setting for Setpoint Negative Rate of Change Limit (PVEU/sec) |
-| **`Inp_ExtInh`** | `BOOL` | `0` | Ẩn (Tag) | [Đầu vào nối dây I/O hoặc Logic] 1=Inhibit External Acquisition, 0=Allow External Acquisition |
-| **`Inp_HiHiDevGate`** | `BOOL` | `1` | Ẩn (Tag) | [Đầu vào nối dây I/O hoặc Logic] High-High Deviation Status Gate, 1=enabled |
-| **`Inp_HiDevGate`** | `BOOL` | `1` | Ẩn (Tag) | [Đầu vào nối dây I/O hoặc Logic] High Deviation Status Gate, 1=enabled |
-| **`Inp_LoDevGate`** | `BOOL` | `1` | Ẩn (Tag) | [Đầu vào nối dây I/O hoặc Logic] Low Deviation Status Gate, 1=enabled |
-| **`Inp_LoLoDevGate`** | `BOOL` | `1` | Ẩn (Tag) | [Đầu vào nối dây I/O hoặc Logic] Low-Low Deviation Status Gate, 1=enabled |
-| **`Inp_Reset`** | `BOOL` | `0` | Ẩn (Tag) | [Đầu vào nối dây I/O hoặc Logic] Chân đầu vào dùng để xóa (Reset) tất cả các cảnh báo đang chờ Reset từ chương trình PLC (1 = Xóa cảnh báo). |
-| **`Cfg_HasMoreObj`** | `BOOL` | `0` | Ẩn (Tag) | [Biến cấu hình thông số] 1 = Báo cho HMI biết có đối tượng mở rộng thông tin đi kèm để bật nút điều hướng. |
-| **`Cfg_HasRatio`** | `BOOL` | `0` | Ẩn (Tag) | [Biến cấu hình thông số] 1=Casc Loop Mode is Ratio, 0=Casc Loop Mode is Cascade |
-| **`Cfg_HasCasc`** | `BOOL` | `0` | Ẩn (Tag) | [Biến cấu hình thông số] 1=Enable the loop to be placed into cascade/ratio mode |
-| **`Cfg_HasAuto`** | `BOOL` | `1` | Ẩn (Tag) | [Biến cấu hình thông số] 1=Enable the loop to be placed into automatic mode |
-| **`Cfg_HasMan`** | `BOOL` | `1` | Ẩn (Tag) | [Biến cấu hình thông số] 1=Enable the loop to be placed into manual mode |
-| **`Cfg_HasSPRamp`** | `BOOL` | `0` | Ẩn (Tag) | [Biến cấu hình thông số] 1=Enable the Setpoint Ramp 'Wizard' function |
-| **`Cfg_LockLM`** | `BOOL` | `0` | Ẩn (Tag) | [Biến cấu hình thông số] Lock Loop Mode: 0=not locked, 1=locked in Normal mode (see Cfg_NormLM) |
-| **`Cfg_PVTrack`** | `BOOL` | `0` | Ẩn (Tag) | [Biến cấu hình thông số] 1=SP tracks PV in Manual, 0=no PV tracking |
-| **`Cfg_CtrlAction`** | `BOOL` | `0` | Ẩn (Tag) | [Biến cấu hình thông số] 1=Direct acting (E=PV-SP), 0=Reverse acting (E=SP-PV) |
-| **`Cfg_Depend`** | `BOOL` | `0` | Ẩn (Tag) | [Biến cấu hình thông số] 1=Dependent gains equation, 0=Independent gains |
-| **`Cfg_DerivSmooth`** | `BOOL` | `0` | Ẩn (Tag) | [Biến cấu hình thông số] 1=Use Derivative Smoothing |
-| **`Cfg_ZCOff`** | `BOOL` | `0` | Ẩn (Tag) | [Biến cấu hình thông số] 1=need not cross zero error to be in deadband, 0=must cross zero error |
-| **`Cfg_PropSPAct`** | `BOOL` | `0` | Ẩn (Tag) | [Biến cấu hình thông số] When the bit is cleared (0, the default), the Proportional action is calculated based on the change in loop error, and a change in setpoint causes a change in loop error, resulting in a change in output. When the bit is set (1), the Proportional action is calculated based on the change in PV, and a change in setpoint results in no change in output. |
-| **`Cfg_DerivSPAct`** | `BOOL` | `1` | Ẩn (Tag) | [Biến cấu hình thông số] When the bit is cleared (0), the Derivative action is calculated based on the change in loop error, and a change in setpoint causes a change in loop error, resulting in a change in output. When the bit is set (1, the default), the Derivative action is calculated based on the change in PV, and a change in setpoint results in no change in output. |
-| **`Cfg_LimitManCV`** | `BOOL` | `0` | Ẩn (Tag) | [Biến cấu hình thông số] 1=CV limits enforced in Manual, 0=No CV Limiting in Manual |
-| **`Cfg_InitToMan`** | `BOOL` | `0` | Ẩn (Tag) | [Biến cấu hình thông số] 1=Go to Manual Loop Mode when an init request is seen |
-| **`Cfg_SetTrack`** | `BOOL` | `1` | Ẩn (Tag) | [Biến cấu hình thông số] This parameter is used to set up bumpless behavior of setting parameters when switching command sources. When this parameter is 1, in Program command source the operator settings track the program settings; in Operator command source the program settings track the operator settings; and the simulation inputs match the output values (transitions are bumpless). When this parameter is 0, the operator settings and program settings are not modified by this instruction. In this case, when the command source is changed, the effective value of the setting can change depending on the program-set and operator-set values. |
-| **`Cfg_SetTrackOvrdHand`** | `BOOL` | `0` | Ẩn (Tag) | [Biến cấu hình thông số] 1=Prog/Oper Settings track Override/Hand Inputs (CV, SP, Ratio) |
-| **`Cfg_SkipSPRoCLim`** | `BOOL` | `0` | Ẩn (Tag) | [Biến cấu hình thông số] 1=Skip SP RoC Limiting in Intlk, Maint, Ovrd modes |
-| **`Cfg_HasIntlkObj`** | `BOOL` | `0` | Ẩn (Tag) | [Biến cấu hình thông số] 1 = Tells HMI an interlock object (for example, P_Intlk) is used for Inp_IntlkOK and navigation to the interlock object’s faceplate is enabled IMPORTANT: The name of the Interlock object in the controller must be this object's name with the suffix ‘_Intlk’. For example, if your P_PIDE object has the name ’PIDE123’, then its Interlock object must be named ‘PIDE123_Intlk’. |
-| **`Cfg_HasCascSPNav`** | `BOOL` | `0` | Ẩn (Tag) | [Biến cấu hình thông số] 1=Tells HMI to enable navigation to a connected cascade SP object |
-| **`Cfg_HasPVNav`** | `BOOL` | `0` | Ẩn (Tag) | [Biến cấu hình thông số] 1=Tells HMI to enable navigation to a connected PV object |
-| **`Cfg_HasCVNav`** | `BOOL` | `0` | Ẩn (Tag) | [Biến cấu hình thông số] 1=Tells HMI to enable navigation to a connected CV object |
-| **`Cfg_OvrdIntlk`** | `BOOL` | `0` | Ẩn (Tag) | [Biến cấu hình thông số] 1=Override ignores Bypassable Intlk; 0=always use Intlk |
-| **`Cfg_IntlkTripLatch`** | `BOOL` | `0` | Ẩn (Tag) | [Biến cấu hình thông số] 1=Latch in Interlock shed action until Reset 0=Return when Interlock clears |
-| **`Cfg_SPFailLatch`** | `BOOL` | `0` | Ẩn (Tag) | [Biến cấu hình thông số] 1=Latch in SP Fail shed action until Reset 0=Return when SP is good |
-| **`Cfg_PVFailLatch`** | `BOOL` | `0` | Ẩn (Tag) | [Biến cấu hình thông số] 1=Latch in PV Fail shed action until Reset 0=Return when PV is good |
-| **`Cfg_CVFailLatch`** | `BOOL` | `0` | Ẩn (Tag) | [Biến cấu hình thông số] 1=Latch in CV Fail shed action until Reset 0=Return when CV is good |
-| **`Cfg_NormLM`** | `DINT` | `0` | Ẩn (Tag) | [Biến cấu hình thông số] Normal Loop Mode 0=Disable Normal selection, 1=Man, 2=Auto, 3=Casc |
-| **`Cfg_PwrupLM`** | `DINT` | `0` | Ẩn (Tag) | [Biến cấu hình thông số] Powerup Loop Mode 0=No change (last), 1=Man (w/ CV), 2=Auto (w/ SP), 3=Casc, 4=Normal |
-| **`Cfg_IntlkTripSPAct`** | `DINT` | `0` | Ẩn (Tag) | [Biến cấu hình thông số] Interlock Trip Setpoint Action: 0=none, 1=hold last good, 2=use Cfg_IntlkSP, 3=set SP to curr. PV |
-| **`Cfg_SPFailSPAct`** | `DINT` | `1` | Ẩn (Tag) | [Biến cấu hình thông số] SP Fail Setpoint Action: 1=hold last good, 2=use Cfg_IntlkSP, 3=set SP to curr. PV |
-| **`Cfg_PVFailSPAct`** | `DINT` | `0` | Ẩn (Tag) | [Biến cấu hình thông số] PV Fail Setpoint Action: 0=none, 1=hold last good, 2=use Cfg_IntlkSP |
-| **`Cfg_CVFailSPAct`** | `DINT` | `0` | Ẩn (Tag) | [Biến cấu hình thông số] CV Fail Setpoint Action: 0=none, 1=hold last good, 2=use Cfg_IntlkSP, 3=set SP to curr. PV |
-| **`Cfg_IntlkTripCVAct`** | `DINT` | `2` | Ẩn (Tag) | [Biến cấu hình thông số] Interlock Trip CV Action: 0=none, 1=hold last good, 2=use Cfg_IntlkCV |
-| **`Cfg_SPFailCVAct`** | `DINT` | `1` | Ẩn (Tag) | [Biến cấu hình thông số] SP Fail CV Action: 0=none, 1=hold last good, 2=use Cfg_IntlkCV |
-| **`Cfg_PVFailCVAct`** | `DINT` | `1` | Ẩn (Tag) | [Biến cấu hình thông số] PV Fail CV Action: 1=hold last good, 2=use Cfg_IntlkCV |
-| **`Cfg_CVFailCVAct`** | `DINT` | `1` | Ẩn (Tag) | [Biến cấu hình thông số] CV Fail CV Action: 1=hold last good, 2=use Cfg_IntlkCV |
-| **`Cfg_IntlkTripLMAct`** | `DINT` | `0` | Ẩn (Tag) | [Biến cấu hình thông số] Interlock Trip Loop Mode Action: 0=none, 1=Man only, 2=Auto or Man only |
-| **`Cfg_SPFailLMAct`** | `DINT` | `0` | Ẩn (Tag) | [Biến cấu hình thông số] SP Fail Loop Mode Action: 0=none, 1=Man only, 2=Auto or Man only |
-| **`Cfg_PVFailLMAct`** | `DINT` | `0` | Ẩn (Tag) | [Biến cấu hình thông số] PV Fail Loop Mode Action: 0=none, 1=Man only, 2=Auto or Man only |
-| **`Cfg_CVFailLMAct`** | `DINT` | `0` | Ẩn (Tag) | [Biến cấu hình thông số] CV Fail Loop Mode Action: 0=none, 1=Man only, 2=Auto or Man only |
-| **`Cfg_PVDecPlcs`** | `DINT` | `2` | Ẩn (Tag) | [Biến cấu hình thông số] Số chữ số thập phân hiển thị trên màn hình HMI of PV / SP (EU) |
-| **`Cfg_CVDecPlcs`** | `DINT` | `2` | Ẩn (Tag) | [Biến cấu hình thông số] Số chữ số thập phân hiển thị trên màn hình HMI of CV (EU) |
-| **`Cfg_HasHiHiDevAlm`** | `BOOL` | `0` | Ẩn (Tag) | [Biến cấu hình thông số] Cấu hình bật/tắt sự tồn tại của cảnh báo: Khi = 1, cảnh báo tương ứng tồn tại và được giám sát; khi = 0, cảnh báo bị vô hiệu hóa. |
-| **`Cfg_HasHiDevAlm`** | `BOOL` | `0` | Ẩn (Tag) | [Biến cấu hình thông số] Cấu hình bật/tắt sự tồn tại của cảnh báo: Khi = 1, cảnh báo tương ứng tồn tại và được giám sát; khi = 0, cảnh báo bị vô hiệu hóa. |
-| **`Cfg_HasLoDevAlm`** | `BOOL` | `0` | Ẩn (Tag) | [Biến cấu hình thông số] Cấu hình bật/tắt sự tồn tại của cảnh báo: Khi = 1, cảnh báo tương ứng tồn tại và được giám sát; khi = 0, cảnh báo bị vô hiệu hóa. |
-| **`Cfg_HasLoLoDevAlm`** | `BOOL` | `0` | Ẩn (Tag) | [Biến cấu hình thông số] Cấu hình bật/tắt sự tồn tại của cảnh báo: Khi = 1, cảnh báo tương ứng tồn tại và được giám sát; khi = 0, cảnh báo bị vô hiệu hóa. |
-| **`Cfg_HasIntlkTripAlm`** | `BOOL` | `0` | Ẩn (Tag) | [Biến cấu hình thông số] Cấu hình bật/tắt sự tồn tại của cảnh báo: Khi = 1, cảnh báo tương ứng tồn tại và được giám sát; khi = 0, cảnh báo bị vô hiệu hóa. |
-| **`Cfg_HasFailAlm`** | `BOOL` | `0` | Ẩn (Tag) | [Biến cấu hình thông số] Cấu hình bật/tắt sự tồn tại của cảnh báo: Khi = 1, cảnh báo tương ứng tồn tại và được giám sát; khi = 0, cảnh báo bị vô hiệu hóa. |
-| **`Cfg_HiHiDevResetReqd`** | `BOOL` | `0` | Ẩn (Tag) | [Biến cấu hình thông số] Cấu hình yêu cầu nhấn Reset để xóa cảnh báo: Khi = 1, cảnh báo tự chốt giữ (Latch) và bắt buộc phải có lệnh Reset sau khi tín hiệu đã về bình thường mới xóa được. Khi = 0, cảnh báo tự xóa ngay khi tín hiệu trở về bình thường. |
-| **`Cfg_HiDevResetReqd`** | `BOOL` | `0` | Ẩn (Tag) | [Biến cấu hình thông số] Cấu hình yêu cầu nhấn Reset để xóa cảnh báo: Khi = 1, cảnh báo tự chốt giữ (Latch) và bắt buộc phải có lệnh Reset sau khi tín hiệu đã về bình thường mới xóa được. Khi = 0, cảnh báo tự xóa ngay khi tín hiệu trở về bình thường. |
-| **`Cfg_LoDevResetReqd`** | `BOOL` | `0` | Ẩn (Tag) | [Biến cấu hình thông số] Cấu hình yêu cầu nhấn Reset để xóa cảnh báo: Khi = 1, cảnh báo tự chốt giữ (Latch) và bắt buộc phải có lệnh Reset sau khi tín hiệu đã về bình thường mới xóa được. Khi = 0, cảnh báo tự xóa ngay khi tín hiệu trở về bình thường. |
-| **`Cfg_LoLoDevResetReqd`** | `BOOL` | `0` | Ẩn (Tag) | [Biến cấu hình thông số] Cấu hình yêu cầu nhấn Reset để xóa cảnh báo: Khi = 1, cảnh báo tự chốt giữ (Latch) và bắt buộc phải có lệnh Reset sau khi tín hiệu đã về bình thường mới xóa được. Khi = 0, cảnh báo tự xóa ngay khi tín hiệu trở về bình thường. |
-| **`Cfg_IntlkTripResetReqd`** | `BOOL` | `0` | Ẩn (Tag) | [Biến cấu hình thông số] Cấu hình yêu cầu nhấn Reset để xóa cảnh báo: Khi = 1, cảnh báo tự chốt giữ (Latch) và bắt buộc phải có lệnh Reset sau khi tín hiệu đã về bình thường mới xóa được. Khi = 0, cảnh báo tự xóa ngay khi tín hiệu trở về bình thường. |
-| **`Cfg_FailResetReqd`** | `BOOL` | `0` | Ẩn (Tag) | [Biến cấu hình thông số] Cấu hình yêu cầu nhấn Reset để xóa cảnh báo: Khi = 1, cảnh báo tự chốt giữ (Latch) và bắt buộc phải có lệnh Reset sau khi tín hiệu đã về bình thường mới xóa được. Khi = 0, cảnh báo tự xóa ngay khi tín hiệu trở về bình thường. |
-| **`Cfg_HiHiDevAckReqd`** | `BOOL` | `1` | Ẩn (Tag) | [Biến cấu hình thông số] Cấu hình yêu cầu Xác nhận (Acknowledge) cảnh báo: Khi = 1, bắt buộc người vận hành hoặc chương trình gửi lệnh Ack khi có báo động. Khi = 0, cảnh báo tự động được xác nhận ngay khi xuất hiện. |
-| **`Cfg_HiDevAckReqd`** | `BOOL` | `1` | Ẩn (Tag) | [Biến cấu hình thông số] Cấu hình yêu cầu Xác nhận (Acknowledge) cảnh báo: Khi = 1, bắt buộc người vận hành hoặc chương trình gửi lệnh Ack khi có báo động. Khi = 0, cảnh báo tự động được xác nhận ngay khi xuất hiện. |
-| **`Cfg_LoDevAckReqd`** | `BOOL` | `1` | Ẩn (Tag) | [Biến cấu hình thông số] Cấu hình yêu cầu Xác nhận (Acknowledge) cảnh báo: Khi = 1, bắt buộc người vận hành hoặc chương trình gửi lệnh Ack khi có báo động. Khi = 0, cảnh báo tự động được xác nhận ngay khi xuất hiện. |
-| **`Cfg_LoLoDevAckReqd`** | `BOOL` | `1` | Ẩn (Tag) | [Biến cấu hình thông số] Cấu hình yêu cầu Xác nhận (Acknowledge) cảnh báo: Khi = 1, bắt buộc người vận hành hoặc chương trình gửi lệnh Ack khi có báo động. Khi = 0, cảnh báo tự động được xác nhận ngay khi xuất hiện. |
-| **`Cfg_IntlkTripAckReqd`** | `BOOL` | `1` | Ẩn (Tag) | [Biến cấu hình thông số] Cấu hình yêu cầu Xác nhận (Acknowledge) cảnh báo: Khi = 1, bắt buộc người vận hành hoặc chương trình gửi lệnh Ack khi có báo động. Khi = 0, cảnh báo tự động được xác nhận ngay khi xuất hiện. |
-| **`Cfg_FailAckReqd`** | `BOOL` | `1` | Ẩn (Tag) | [Biến cấu hình thông số] Cấu hình yêu cầu Xác nhận (Acknowledge) cảnh báo: Khi = 1, bắt buộc người vận hành hoặc chương trình gửi lệnh Ack khi có báo động. Khi = 0, cảnh báo tự động được xác nhận ngay khi xuất hiện. |
-| **`Cfg_HiHiDevSeverity`** | `DINT` | `750` | Ẩn (Tag) | [Biến cấu hình thông số] Cấu hình mức độ nghiêm trọng (Severity) của cảnh báo để điều khiển màu sắc và biểu tượng trên HMI: 1..250 = Thấp (Low), 251..500 = Trung bình (Medium), 501..750 = Cao (High), 751..1000 = Khẩn cấp (Urgent). |
-| **`Cfg_HiDevSeverity`** | `DINT` | `500` | Ẩn (Tag) | [Biến cấu hình thông số] Cấu hình mức độ nghiêm trọng (Severity) của cảnh báo để điều khiển màu sắc và biểu tượng trên HMI: 1..250 = Thấp (Low), 251..500 = Trung bình (Medium), 501..750 = Cao (High), 751..1000 = Khẩn cấp (Urgent). |
-| **`Cfg_LoDevSeverity`** | `DINT` | `500` | Ẩn (Tag) | [Biến cấu hình thông số] Cấu hình mức độ nghiêm trọng (Severity) của cảnh báo để điều khiển màu sắc và biểu tượng trên HMI: 1..250 = Thấp (Low), 251..500 = Trung bình (Medium), 501..750 = Cao (High), 751..1000 = Khẩn cấp (Urgent). |
-| **`Cfg_LoLoDevSeverity`** | `DINT` | `750` | Ẩn (Tag) | [Biến cấu hình thông số] Cấu hình mức độ nghiêm trọng (Severity) của cảnh báo để điều khiển màu sắc và biểu tượng trên HMI: 1..250 = Thấp (Low), 251..500 = Trung bình (Medium), 501..750 = Cao (High), 751..1000 = Khẩn cấp (Urgent). |
-| **`Cfg_IntlkTripSeverity`** | `DINT` | `500` | Ẩn (Tag) | [Biến cấu hình thông số] Cấu hình mức độ nghiêm trọng (Severity) của cảnh báo để điều khiển màu sắc và biểu tượng trên HMI: 1..250 = Thấp (Low), 251..500 = Trung bình (Medium), 501..750 = Cao (High), 751..1000 = Khẩn cấp (Urgent). |
-| **`Cfg_FailSeverity`** | `DINT` | `1000` | Ẩn (Tag) | [Biến cấu hình thông số] Cấu hình mức độ nghiêm trọng (Severity) của cảnh báo để điều khiển màu sắc và biểu tượng trên HMI: 1..250 = Thấp (Low), 251..500 = Trung bình (Medium), 501..750 = Cao (High), 751..1000 = Khẩn cấp (Urgent). |
-| **`Cfg_MinRatio`** | `REAL` | `1` | Ẩn (Tag) | [Biến cấu hình thông số] Minimum allowed Ratio (unitless) |
-| **`Cfg_MaxRatio`** | `REAL` | `1` | Ẩn (Tag) | [Biến cấu hình thông số] Maximum allowed Ratio (unitless) |
-| **`Cfg_MinSP`** | `REAL` | `0` | Ẩn (Tag) | [Biến cấu hình thông số] Minimum allowed Setpoint (SP) value (PVEU) |
-| **`Cfg_MaxSP`** | `REAL` | `100` | Ẩn (Tag) | [Biến cấu hình thông số] Maximum allowed Setpoint (SP) value (PVEU) |
-| **`Cfg_MaxSPRoCInc`** | `REAL` | `0` | Ẩn (Tag) | [Biến cấu hình thông số] Maximum allowed Setpoint Positive Rate of Change Limit (PVEU/sec) |
-| **`Cfg_MaxSPRoCDec`** | `REAL` | `0` | Ẩn (Tag) | [Biến cấu hình thông số] Maximum allowed Setpoint Negative Rate of Change Limit (PVEU/sec) |
-| **`Cfg_SPRampMaxDev`** | `REAL` | `0` | Ẩn (Tag) | [Biến cấu hình thông số] If deviation exceeds this value, pause SP ramp (0.0=never pause) |
-| **`Cfg_PVEUMin`** | `REAL` | `0` | Ẩn (Tag) | [Biến cấu hình thông số] PV Engineering Units Mimimum Value (PVEU) |
-| **`Cfg_PVEUMax`** | `REAL` | `100` | Ẩn (Tag) | [Biến cấu hình thông số] PV Engineering Units Maximum Value (PVEU) |
-| **`Cfg_CVEUMin`** | `REAL` | `0` | Ẩn (Tag) | [Biến cấu hình thông số] CV Engineering Units Minimum Value (CVEU) |
-| **`Cfg_CVEUMax`** | `REAL` | `100` | Ẩn (Tag) | [Biến cấu hình thông số] CV engineering units maximum value (CV engineering units). TIP: The P_PIDE instruction supports reverse CV EU scaling, Cfg_CVEUMax can be less than (but not equal to) Cfg_CVEUMin. |
-| **`Cfg_CVRawMin`** | `REAL` | `0` | Ẩn (Tag) | [Biến cấu hình thông số] CV Output Units Minimum Value (CVRaw, for scaling) |
-| **`Cfg_CVRawMax`** | `REAL` | `100` | Ẩn (Tag) | [Biến cấu hình thông số] CV Output Units Maximum Value (CVRaw, for scaling) |
-| **`Cfg_ExecT`** | `REAL` | `0` | Ẩn (Tag) | [Biến cấu hình thông số] Execution Time (interval) for PID Algorithm (sec) |
-| **`Cfg_PGain`** | `REAL` | `0` | Ẩn (Tag) | [Biến cấu hình thông số] Proportional (independent) or Loop (dependent) Gain (unitless) |
-| **`Cfg_IGain`** | `REAL` | `0` | Ẩn (Tag) | [Biến cấu hình thông số] Integral Gain (1/min independent or min/repeat dependent) |
-| **`Cfg_DGain`** | `REAL` | `0` | Ẩn (Tag) | [Biến cấu hình thông số] Derivative Gain (min) |
-| **`Cfg_ZCDB`** | `REAL` | `0` | Ẩn (Tag) | [Biến cấu hình thông số] Normal Zero Crossing Deadband (PVEU) |
-| **`Cfg_MinCV`** | `REAL` | `0` | Ẩn (Tag) | [Biến cấu hình thông số] Minimum allowed Controlled Variable (CV) value (CVEU) |
-| **`Cfg_MaxCV`** | `REAL` | `100` | Ẩn (Tag) | [Biến cấu hình thông số] Maximum allowed Controlled Variable (CV) value (CVEU) |
-| **`Cfg_CVRoCLim`** | `REAL` | `0` | Ẩn (Tag) | [Biến cấu hình thông số] CV Rate of Change Limit (CVEU/sec) |
-| **`Cfg_MaxInactiveCV`** | `REAL` | `0` | Ẩn (Tag) | [Biến cấu hình thông số] When Val_CV is greater than this value (in CV EU) set Sts_Active (for HMI) |
-| **`Cfg_IntlkSP`** | `REAL` | `0` | Ẩn (Tag) | [Biến cấu hình thông số] SP Value to use with Interlock / Bad Value SP action (PVEU) |
-| **`Cfg_IntlkCV`** | `REAL` | `0` | Ẩn (Tag) | [Biến cấu hình thông số] CV Value to use with Interlock / Bad Value CV action (CVEU) |
-| **`Cfg_PwrupSP`** | `REAL` | `0` | Ẩn (Tag) | [Biến cấu hình thông số] Loop SP on powerup, used if Cfg_PwrupLM = 1 (Manual) or 2 (Auto) (PVEU) |
-| **`Cfg_PwrupCV`** | `REAL` | `0` | Ẩn (Tag) | [Biến cấu hình thông số] Loop CV on powerup, used if Cfg_PwrupLM <> 0 (none) (CVEU) |
-| **`Cfg_HiHiDevOnDly`** | `REAL` | `0` | Ẩn (Tag) | [Biến cấu hình thông số] These parameters determine the minimum time (in seconds) the loop deviation must remain beyond the status threshold for the status to be set. On-delay times are used to avoid unnecessary alarms when the deviation momentarily overshoots its threshold (for example, Val_HiHiDevLim). |
-| **`Cfg_HiDevOnDly`** | `REAL` | `0` | Ẩn (Tag) | [Biến cấu hình thông số] These parameters determine the minimum time (in seconds) the loop deviation must remain beyond the status threshold for the status to be set. On-delay times are used to avoid unnecessary alarms when the deviation momentarily overshoots its threshold (for example, Val_HiHiDevLim). |
-| **`Cfg_LoDevOnDly`** | `REAL` | `0` | Ẩn (Tag) | [Biến cấu hình thông số] These parameters determine the minimum time (in seconds) the loop deviation must remain beyond the status threshold for the status to be set. On-delay times are used to avoid unnecessary alarms when the deviation momentarily overshoots its threshold (for example, Val_HiHiDevLim). |
-| **`Cfg_LoLoDevOnDly`** | `REAL` | `0` | Ẩn (Tag) | [Biến cấu hình thông số] These parameters determine the minimum time (in seconds) the loop deviation must remain beyond the status threshold for the status to be set. On-delay times are used to avoid unnecessary alarms when the deviation momentarily overshoots its threshold (for example, Val_HiHiDevLim). |
-| **`Cfg_HiHiDevOffDly`** | `REAL` | `0` | Ẩn (Tag) | [Biến cấu hình thông số] These parameters determine the amount of time (in seconds) the loop deviation must stay within each status threshold to clear the status. Off delay times are used to reduce chattering alarms. EXAMPLE: If Cfg_HiDevOffDly is 5 seconds, the loop deviation must be below the status limit (Val_HiHiDevLim) minus deadband (Cfg_DevDB) for 5 seconds before the status is returned to normal. |
-| **`Cfg_HiDevOffDly`** | `REAL` | `0` | Ẩn (Tag) | [Biến cấu hình thông số] These parameters determine the amount of time (in seconds) the loop deviation must stay within each status threshold to clear the status. Off delay times are used to reduce chattering alarms. EXAMPLE: If Cfg_HiDevOffDly is 5 seconds, the loop deviation must be below the status limit (Val_HiHiDevLim) minus deadband (Cfg_DevDB) for 5 seconds before the status is returned to normal. |
-| **`Cfg_LoDevOffDly`** | `REAL` | `0` | Ẩn (Tag) | [Biến cấu hình thông số] These parameters determine the amount of time (in seconds) the loop deviation must stay within each status threshold to clear the status. Off delay times are used to reduce chattering alarms. EXAMPLE: If Cfg_HiDevOffDly is 5 seconds, the loop deviation must be below the status limit (Val_HiHiDevLim) minus deadband (Cfg_DevDB) for 5 seconds before the status is returned to normal. |
-| **`Cfg_LoLoDevOffDly`** | `REAL` | `0` | Ẩn (Tag) | [Biến cấu hình thông số] These parameters determine the amount of time (in seconds) the loop deviation must stay within each status threshold to clear the status. Off delay times are used to reduce chattering alarms. EXAMPLE: If Cfg_HiDevOffDly is 5 seconds, the loop deviation must be below the status limit (Val_HiHiDevLim) minus deadband (Cfg_DevDB) for 5 seconds before the status is returned to normal. |
-| **`Cfg_HiHiDevGateDly`** | `REAL` | `0` | Ẩn (Tag) | [Biến cấu hình thông số] Thời gian trễ mở cổng giám sát (Gate Delay, tính bằng giây): Khoảng thời gian chân cổng điều kiện (Gate Input) phải duy trì ở mức 1 trước khi bắt đầu cho phép giám sát ngưỡng. |
-| **`Cfg_HiDevGateDly`** | `REAL` | `0` | Ẩn (Tag) | [Biến cấu hình thông số] Thời gian trễ mở cổng giám sát (Gate Delay, tính bằng giây): Khoảng thời gian chân cổng điều kiện (Gate Input) phải duy trì ở mức 1 trước khi bắt đầu cho phép giám sát ngưỡng. |
-| **`Cfg_LoDevGateDly`** | `REAL` | `0` | Ẩn (Tag) | [Biến cấu hình thông số] Thời gian trễ mở cổng giám sát (Gate Delay, tính bằng giây): Khoảng thời gian chân cổng điều kiện (Gate Input) phải duy trì ở mức 1 trước khi bắt đầu cho phép giám sát ngưỡng. |
-| **`Cfg_LoLoDevGateDly`** | `REAL` | `0` | Ẩn (Tag) | [Biến cấu hình thông số] Thời gian trễ mở cổng giám sát (Gate Delay, tính bằng giây): Khoảng thời gian chân cổng điều kiện (Gate Input) phải duy trì ở mức 1 trước khi bắt đầu cho phép giám sát ngưỡng. |
-| **`Cfg_HiHiDevLim`** | `REAL` | `1.5000000000000001E+38` | Ẩn (Tag) | [Biến cấu hình thông số] Current High-High Deviation Status Threshold (PVEU) |
-| **`Cfg_HiHiDevDB`** | `REAL` | `0` | Ẩn (Tag) | [Biến cấu hình thông số] High-High Devation Alarm Deadband (PVEU) |
-| **`Cfg_HiDevLim`** | `REAL` | `1.5000000000000001E+38` | Ẩn (Tag) | [Biến cấu hình thông số] Current High Deviation Status Threshold (PVEU) |
-| **`Cfg_HiDevDB`** | `REAL` | `0` | Ẩn (Tag) | [Biến cấu hình thông số] High Devation Alarm Deadband (PVEU) |
-| **`Cfg_LoDevLim`** | `REAL` | `1.5000000000000001E+38` | Ẩn (Tag) | [Biến cấu hình thông số] Current Low Deviation Status Threshold (PVEU) |
-| **`Cfg_LoDevDB`** | `REAL` | `0` | Ẩn (Tag) | [Biến cấu hình thông số] Low Devation Alarm Deadband (PVEU) |
-| **`Cfg_LoLoDevLim`** | `REAL` | `1.5000000000000001E+38` | Ẩn (Tag) | [Biến cấu hình thông số] Current Low-Low Deviation Status Threshold (PVEU) |
-| **`Cfg_LoLoDevDB`** | `REAL` | `0` | Ẩn (Tag) | [Biến cấu hình thông số] Low-Low Devation Alarm Deadband (PVEU) |
-| **`Cfg_OperKeep`** | `SINT` | `2#0000_0000` | Ẩn (Tag) | [Biến cấu hình thông số] Oper keeps control: .0=Loop Mode .1=CV .2=SP, .3=Ratio |
-| **`Cfg_ProgKeep`** | `SINT` | `2#0000_0000` | Ẩn (Tag) | [Biến cấu hình thông số] Prog keeps control: .0=Loop Mode .1=CV .2=SP, .3=Ratio |
-| **`Cfg_ExtKeep`** | `SINT` | `2#0000_0000` | Ẩn (Tag) | [Biến cấu hình thông số] Ext keeps control: .0=Loop Mode .1=CV .2=SP, .3=Ratio |
-| **`PSet_Ratio`** | `REAL` | `1` | Ẩn (Tag) | [Giá trị đặt từ Chương trình PLC] Program Setting for Ratio (loop CasRat and Ratio enabled) (unitless) |
-| **`PSet_SP`** | `REAL` | `0` | Ẩn (Tag) | [Giá trị đặt từ Chương trình PLC] Program Setting for Setpoint (loop Auto) (PVEU) |
-| **`PSet_SPRoCLimInc`** | `REAL` | `0` | Ẩn (Tag) | [Giá trị đặt từ Chương trình PLC] Program Setting for Setpoint Positive Rate of Change Limit Increasing (PVEU/sec) |
-| **`PSet_SPRoCLimDec`** | `REAL` | `0` | Ẩn (Tag) | [Giá trị đặt từ Chương trình PLC] Program Setting for Setpoint Negative Rate of Change Limit Decreasing (PVEU/sec) |
-| **`PSet_SPTarget`** | `REAL` | `0` | Ẩn (Tag) | [Giá trị đặt từ Chương trình PLC] Program Setting for Setpoint Ramp Target (endpoint, for ramp wizard) (PVEU) |
-| **`PSet_SPRampT`** | `REAL` | `0` | Ẩn (Tag) | [Giá trị đặt từ Chương trình PLC] Program Setting for Setpoint Ramp Time (to reach target, for ramp wizard) (sec). Valid = 0.0 to 28800.0 seconds. |
-| **`PSet_CV`** | `REAL` | `0` | Ẩn (Tag) | [Giá trị đặt từ Chương trình PLC] Program Setting for Controlled Variable (loop Manual) (CVEU) |
-| **`PSet_Owner`** | `DINT` | `0` | Ẩn (Tag) | [Giá trị đặt từ Chương trình PLC] Mã định danh chủ sở hữu chương trình (Program Owner ID: khác 0 để đăng ký chiếm quyền, bằng 0 để nhả quyền). |
-| **`XSet_Ratio`** | `REAL` | `1` | Ẩn (Tag) | [Giá trị đặt từ Hệ thống ngoài (External)] External Setting for Ratio (loop CasRat and Ratio enabled) (unitless) |
-| **`XSet_SP`** | `REAL` | `0` | Ẩn (Tag) | [Giá trị đặt từ Hệ thống ngoài (External)] External Setting for Setpoint (loop Auto) (PVEU) |
-| **`XSet_SPRoCLimInc`** | `REAL` | `0` | Ẩn (Tag) | [Giá trị đặt từ Hệ thống ngoài (External)] External Setting for Setpoint Positive Rate of Change Limit Increasing (PVEU/sec) |
-| **`XSet_SPRoCLimDec`** | `REAL` | `0` | Ẩn (Tag) | [Giá trị đặt từ Hệ thống ngoài (External)] External Setting for Setpoint Negative Rate of Change Limit Decreasing (PVEU/sec) |
-| **`XSet_SPTarget`** | `REAL` | `0` | Ẩn (Tag) | [Giá trị đặt từ Hệ thống ngoài (External)] External Setting for Setpoint Ramp Target (endpoint, for ramp wizard) (PVEU) |
-| **`XSet_SPRampT`** | `REAL` | `0` | Ẩn (Tag) | [Giá trị đặt từ Hệ thống ngoài (External)] External Setting for Setpoint Ramp Time (to reach target, for ramp wizard) (sec). Valid = 0.0 to 28800.0 seconds. |
-| **`XSet_CV`** | `REAL` | `0` | Ẩn (Tag) | [Giá trị đặt từ Hệ thống ngoài (External)] External Setting for Controlled Variable (loop Manual) (CVEU) |
-| **`PCmd_Casc`** | `BOOL` | `0` | Ẩn (Tag) | [Lệnh từ Chương trình PLC (Xung 1-shot)] Lệnh từ Chương trình tự động (Program) để select Cascade / Ratio Loop Mode |
-| **`PCmd_Auto`** | `BOOL` | `0` | Ẩn (Tag) | [Lệnh từ Chương trình PLC (Xung 1-shot)] Lệnh từ Chương trình tự động (Program) để select Automatic Loop Mode |
-| **`PCmd_Man`** | `BOOL` | `0` | Ẩn (Tag) | [Lệnh từ Chương trình PLC (Xung 1-shot)] Lệnh từ Chương trình tự động (Program) để select Manual Loop Mode |
-| **`PCmd_NormLM`** | `BOOL` | `0` | Ẩn (Tag) | [Lệnh từ Chương trình PLC (Xung 1-shot)] Lệnh từ Người vận hành (Operator HMI) để select Normal Loop Mode (see Cfg_NormLM) |
-| **`PCmd_SPRampStart`** | `BOOL` | `0` | Ẩn (Tag) | [Lệnh từ Chương trình PLC (Xung 1-shot)] Lệnh từ Chương trình tự động (Program) để initiate SP ramping |
-| **`PCmd_SPRampStop`** | `BOOL` | `0` | Ẩn (Tag) | [Lệnh từ Chương trình PLC (Xung 1-shot)] Lệnh từ Chương trình tự động (Program) để stop SP ramping |
-| **`PCmd_Prog`** | `BOOL` | `0` | Ẩn (Tag) | [Lệnh từ Chương trình PLC (Xung 1-shot)] Lệnh từ Chương trình tự động (Program) để select Program (Oper to Prog) |
-| **`PCmd_Oper`** | `BOOL` | `0` | Ẩn (Tag) | [Lệnh từ Chương trình PLC (Xung 1-shot)] Lệnh từ Chương trình tự động (Program) để select Operator (Prog to Oper) |
-| **`PCmd_Lock`** | `BOOL` | `0` | Ẩn (Tag) | [Lệnh từ Chương trình PLC (Xung 1-shot)] Lệnh từ Chương trình tự động (Program) để Khóa cứng chế độ Program (không cho phép Operator giành quyền) |
-| **`PCmd_Unlock`** | `BOOL` | `0` | Ẩn (Tag) | [Lệnh từ Chương trình PLC (Xung 1-shot)] Lệnh từ Chương trình tự động (Program) để Unlock Program (allow Oper to acquire) |
-| **`PCmd_Normal`** | `BOOL` | `0` | Ẩn (Tag) | [Lệnh từ Chương trình PLC (Xung 1-shot)] Lệnh từ Chương trình tự động (Program) để select Normal (Oper or Prog) |
-| **`XCmd_Acq`** | `BOOL` | `0` | Ẩn (Tag) | [Lệnh từ Hệ thống ngoài (External)] Lệnh từ Hệ thống ngoài (External) để Acquire (Oper/Prog to Ext) |
-| **`XCmd_Rel`** | `BOOL` | `0` | Ẩn (Tag) | [Lệnh từ Hệ thống ngoài (External)] Lệnh từ Hệ thống ngoài (External) để Release (Ext to Oper/Prog) |
-| **`PCmd_Reset`** | `BOOL` | `0` | Ẩn (Tag) | [Lệnh từ Chương trình PLC (Xung 1-shot)] Ghi PCmd_Reset = 1 để xóa tất cả các cảnh báo chốt đang chờ Reset (Biến xung tự động xóa về 0 sau khi thực thi). |
-| **`PCmd_HiHiDevAck`** | `BOOL` | `0` | Ẩn (Tag) | [Lệnh từ Chương trình PLC (Xung 1-shot)] Ghi PCmd_<Alarm>Ack = 1 để Xác nhận (Acknowledge) alarm (Biến xung tự động xóa về 0 sau khi thực thi). |
-| **`PCmd_HiDevAck`** | `BOOL` | `0` | Ẩn (Tag) | [Lệnh từ Chương trình PLC (Xung 1-shot)] Ghi PCmd_<Alarm>Ack = 1 để Xác nhận (Acknowledge) alarm (Biến xung tự động xóa về 0 sau khi thực thi). |
-| **`PCmd_LoDevAck`** | `BOOL` | `0` | Ẩn (Tag) | [Lệnh từ Chương trình PLC (Xung 1-shot)] Ghi PCmd_<Alarm>Ack = 1 để Xác nhận (Acknowledge) alarm (Biến xung tự động xóa về 0 sau khi thực thi). |
-| **`PCmd_LoLoDevAck`** | `BOOL` | `0` | Ẩn (Tag) | [Lệnh từ Chương trình PLC (Xung 1-shot)] Ghi PCmd_<Alarm>Ack = 1 để Xác nhận (Acknowledge) alarm (Biến xung tự động xóa về 0 sau khi thực thi). |
-| **`PCmd_IntlkTripAck`** | `BOOL` | `0` | Ẩn (Tag) | [Lệnh từ Chương trình PLC (Xung 1-shot)] Ghi PCmd_<Alarm>Ack = 1 để Xác nhận (Acknowledge) alarm (Biến xung tự động xóa về 0 sau khi thực thi). |
-| **`PCmd_FailAck`** | `BOOL` | `0` | Ẩn (Tag) | [Lệnh từ Chương trình PLC (Xung 1-shot)] Ghi PCmd_<Alarm>Ack = 1 để Xác nhận (Acknowledge) alarm (Biến xung tự động xóa về 0 sau khi thực thi). |
-| **`PCmd_HiHiDevSuppress`** | `BOOL` | `0` | Ẩn (Tag) | [Lệnh từ Chương trình PLC (Xung 1-shot)] Lệnh từ Chương trình tự động (Program) để Ức chế (Suppress) High-High Deviation Alarm |
-| **`PCmd_HiDevSuppress`** | `BOOL` | `0` | Ẩn (Tag) | [Lệnh từ Chương trình PLC (Xung 1-shot)] Lệnh từ Chương trình tự động (Program) để Ức chế (Suppress) High Deviation Alarm |
-| **`PCmd_LoDevSuppress`** | `BOOL` | `0` | Ẩn (Tag) | [Lệnh từ Chương trình PLC (Xung 1-shot)] Lệnh từ Chương trình tự động (Program) để Ức chế (Suppress) Low Deviation Alarm |
-| **`PCmd_LoLoDevSuppress`** | `BOOL` | `0` | Ẩn (Tag) | [Lệnh từ Chương trình PLC (Xung 1-shot)] Lệnh từ Chương trình tự động (Program) để Ức chế (Suppress) Low-Low Deviation Alarm |
-| **`PCmd_IntlkTripSuppress`** | `BOOL` | `0` | Ẩn (Tag) | [Lệnh từ Chương trình PLC (Xung 1-shot)] Lệnh từ Chương trình tự động (Program) để Ức chế (Suppress) Interlock Trip Alarm |
-| **`PCmd_FailSuppress`** | `BOOL` | `0` | Ẩn (Tag) | [Lệnh từ Chương trình PLC (Xung 1-shot)] Lệnh từ Chương trình tự động (Program) để Ức chế (Suppress) Loop Failure Alarm |
-| **`PCmd_HiHiDevUnsuppress`** | `BOOL` | `0` | Ẩn (Tag) | [Lệnh từ Chương trình PLC (Xung 1-shot)] Lệnh từ Chương trình tự động (Program) để Gỡ bỏ ức chế (Unsuppress) High-High Deviation Alarm |
-| **`PCmd_HiDevUnsuppress`** | `BOOL` | `0` | Ẩn (Tag) | [Lệnh từ Chương trình PLC (Xung 1-shot)] Lệnh từ Chương trình tự động (Program) để Gỡ bỏ ức chế (Unsuppress) High Deviation Alarm |
-| **`PCmd_LoDevUnsuppress`** | `BOOL` | `0` | Ẩn (Tag) | [Lệnh từ Chương trình PLC (Xung 1-shot)] Lệnh từ Chương trình tự động (Program) để Gỡ bỏ ức chế (Unsuppress) Low Deviation Alarm |
-| **`PCmd_LoLoDevUnsuppress`** | `BOOL` | `0` | Ẩn (Tag) | [Lệnh từ Chương trình PLC (Xung 1-shot)] Lệnh từ Chương trình tự động (Program) để Gỡ bỏ ức chế (Unsuppress) Low-Low Deviation Alarm |
-| **`PCmd_IntlkTripUnsuppress`** | `BOOL` | `0` | Ẩn (Tag) | [Lệnh từ Chương trình PLC (Xung 1-shot)] Lệnh từ Chương trình tự động (Program) để Gỡ bỏ ức chế (Unsuppress) Interlock Trip Alarm |
-| **`PCmd_FailUnsuppress`** | `BOOL` | `0` | Ẩn (Tag) | [Lệnh từ Chương trình PLC (Xung 1-shot)] Lệnh từ Chương trình tự động (Program) để Gỡ bỏ ức chế (Unsuppress) Loop Failure Alarm |
-| **`PCmd_HiHiDevUnshelve`** | `BOOL` | `0` | Ẩn (Tag) | [Lệnh từ Chương trình PLC (Xung 1-shot)] Ghi PCmd_<Alarm>Gỡ bỏ tạm hoãn (Unshelve) = 1 để Gỡ bỏ tạm hoãn (Unshelve) alarm (Biến xung tự động xóa về 0 sau khi thực thi). |
-| **`PCmd_HiDevUnshelve`** | `BOOL` | `0` | Ẩn (Tag) | [Lệnh từ Chương trình PLC (Xung 1-shot)] Ghi PCmd_<Alarm>Gỡ bỏ tạm hoãn (Unshelve) = 1 để Gỡ bỏ tạm hoãn (Unshelve) alarm (Biến xung tự động xóa về 0 sau khi thực thi). |
-| **`PCmd_LoDevUnshelve`** | `BOOL` | `0` | Ẩn (Tag) | [Lệnh từ Chương trình PLC (Xung 1-shot)] Ghi PCmd_<Alarm>Gỡ bỏ tạm hoãn (Unshelve) = 1 để Gỡ bỏ tạm hoãn (Unshelve) alarm (Biến xung tự động xóa về 0 sau khi thực thi). |
-| **`PCmd_LoLoDevUnshelve`** | `BOOL` | `0` | Ẩn (Tag) | [Lệnh từ Chương trình PLC (Xung 1-shot)] Ghi PCmd_<Alarm>Gỡ bỏ tạm hoãn (Unshelve) = 1 để Gỡ bỏ tạm hoãn (Unshelve) alarm (Biến xung tự động xóa về 0 sau khi thực thi). |
-| **`PCmd_IntlkTripUnshelve`** | `BOOL` | `0` | Ẩn (Tag) | [Lệnh từ Chương trình PLC (Xung 1-shot)] Ghi PCmd_<Alarm>Gỡ bỏ tạm hoãn (Unshelve) = 1 để Gỡ bỏ tạm hoãn (Unshelve) alarm (Biến xung tự động xóa về 0 sau khi thực thi). |
-| **`PCmd_FailUnshelve`** | `BOOL` | `0` | Ẩn (Tag) | [Lệnh từ Chương trình PLC (Xung 1-shot)] Ghi PCmd_<Alarm>Gỡ bỏ tạm hoãn (Unshelve) = 1 để Gỡ bỏ tạm hoãn (Unshelve) alarm (Biến xung tự động xóa về 0 sau khi thực thi). |
-| **`MCmd_Rel`** | `BOOL` | `0` | Ẩn (Tag) | [Lệnh từ tab Bảo trì (HMI Maintenance)] Lệnh từ Nhân viên bảo trì (Maintenance) để Release (Maint to Oper/Prog/Ovrd) |
-| **`OCmd_Unlock`** | `BOOL` | `0` | Ẩn (Tag) | [Lệnh từ màn hình HMI Operator] Lệnh từ Người vận hành (Operator HMI) để Unlock Operator (allow Prog to acquire) |
-| **`XCmd_Casc`** | `BOOL` | `0` | Ẩn (Tag) | [Lệnh từ Hệ thống ngoài (External)] Lệnh từ Hệ thống ngoài (External) để select Cascade / Ratio control |
-| **`XCmd_Auto`** | `BOOL` | `0` | Ẩn (Tag) | [Lệnh từ Hệ thống ngoài (External)] Lệnh từ Hệ thống ngoài (External) để select Automatic control |
-| **`XCmd_Man`** | `BOOL` | `0` | Ẩn (Tag) | [Lệnh từ Hệ thống ngoài (External)] Lệnh từ Hệ thống ngoài (External) để select Manual control |
-| **`XCmd_NormLM`** | `BOOL` | `0` | Ẩn (Tag) | [Lệnh từ Hệ thống ngoài (External)] Lệnh từ Hệ thống ngoài (External) để select Normal Loop Mode (see Cfg_NormLM) |
-| **`XCmd_SPRampStart`** | `BOOL` | `0` | Ẩn (Tag) | [Lệnh từ Hệ thống ngoài (External)] Lệnh từ Hệ thống ngoài (External) để initiate SP ramping |
-| **`XCmd_SPRampStop`** | `BOOL` | `0` | Ẩn (Tag) | [Lệnh từ Hệ thống ngoài (External)] Lệnh từ Hệ thống ngoài (External) để stop SP ramping |
-| **`XCmd_Reset`** | `BOOL` | `0` | Ẩn (Tag) | [Lệnh từ Hệ thống ngoài (External)] Lệnh từ Hệ thống ngoài (External) để Reset all Alarms requiring Reset |
+| **`EnableIn`** | `BOOL` | `1` | Ẩn (Tag) | Chân kích hoạt thực thi khối AOI trên Rung (Enable In): Trong Ladder (LD), nếu điều kiện Rung = True thì chạy chương trình chính (Logic routine), nếu Rung = False thì chạy chương trình xử lý khi ngắt (EnableInFalse routine). Trong FBD, nếu bằng 1 hoặc bỏ trống không nối dây thì khối hoạt động bình thường |
+| **`Inp_PV`** | `REAL` | `0` | Hiện (Pin) | [Đầu vào nối dây I/O hoặc Logic] Tín hiệu biến quá trình đầu vào (Process Variable - PV) đọc từ cảm biến hoặc thẻ Analog/Discrete Input |
+| **`Inp_CascSP`** | `REAL` | `0` | Hiện (Pin) | [Đầu vào nối dây I/O hoặc Logic] Giá trị đặt tầng (Cascade Setpoint) từ bộ điều khiển sơ cấp hoặc biến độc lập trong điều khiển Tỷ lệ (Ratio, đơn vị PVEU) |
+| **`Inp_FF`** | `REAL` | `0` | Ẩn (Tag) | [Đầu vào nối dây I/O hoặc Logic] Tín hiệu bù nhiễu tiến cử đầu vào (Feedforward Term, tính theo đơn vị CVEU) |
+| **`Inp_FFPrev`** | `REAL` | `0` | Ẩn (Tag) | [Đầu vào nối dây I/O hoặc Logic] Giá trị phản hồi thành phần bù nhiễu tiến cử (FF Feedback, đơn vị CVEU) từ khối phía sau |
+| **`Inp_CVInitVal`** | `REAL` | `0` | Ẩn (Tag) | [Đầu vào nối dây I/O hoặc Logic] Giá trị khởi tạo dành cho ngõ ra CV (đơn vị CVEU) khi có yêu cầu khởi tạo bám trạng thái (Inp_UseCVInitVal = 1) |
+| **`Inp_CVPrev`** | `REAL` | `0` | Ẩn (Tag) | [Đầu vào nối dây I/O hoặc Logic] Giá trị phản hồi CV thực tế từ khối phía sau (Downstream CV Feedback, đơn vị CVEU) dùng để tính toán chống bão hòa tích phân |
+| **`Inp_UseFFPrev`** | `BOOL` | `0` | Ẩn (Tag) | [Đầu vào nối dây I/O hoặc Logic] 1 = Sử dụng giá trị Inp_FFPrev làm thành phần FF chu kỳ trước; 0 = Dùng giá trị của chu kỳ quét trước |
+| **`Inp_UseCVInitVal`** | `BOOL` | `0` | Ẩn (Tag) | [Đầu vào nối dây I/O hoặc Logic] Cờ yêu cầu khởi tạo ngõ ra CV bám theo giá trị Inp_CVInitVal (1 = Khởi tạo bám theo thiết bị phía sau để chuyển mạch không giật) |
+| **`Inp_UseCVPrev`** | `BOOL` | `0` | Ẩn (Tag) | [Đầu vào nối dây I/O hoặc Logic] 1 = Sử dụng giá trị phản hồi Inp_CVPrev làm CV chu kỳ trước của thuật toán PID; 0 = Dùng giá trị tính toán của chu kỳ quét trước |
+| **`Inp_WindupHi`** | `BOOL` | `0` | Ẩn (Tag) | [Đầu vào nối dây I/O hoặc Logic] Cờ báo bão hòa giới hạn trên từ khối phía sau (1 = Ngăn bộ điều khiển sơ cấp tiếp tục tăng ngõ ra CV) |
+| **`Inp_WindupLo`** | `BOOL` | `0` | Ẩn (Tag) | [Đầu vào nối dây I/O hoặc Logic] Cờ báo bão hòa giới hạn dưới từ khối phía sau (1 = Ngăn bộ điều khiển sơ cấp tiếp tục giảm ngõ ra CV) |
+| **`Inp_PVBad`** | `BOOL` | `0` | Ẩn (Tag) | [Đầu vào nối dây I/O hoặc Logic] Trạng thái lỗi chất lượng tín hiệu hoặc lỗi truyền thông đầu vào PV (1 = Lỗi/Bad, 0 = Tốt/OK — thường nối từ bit Channel Fault của thẻ I/O) |
+| **`Inp_PVUncertain`** | `BOOL` | `0` | Ẩn (Tag) | [Đầu vào nối dây I/O hoặc Logic] Trạng thái chất lượng tín hiệu đầu vào PV không chắc chắn (1 = Không chắc chắn/Uncertain, 0 = Tốt/OK) |
+| **`Inp_CVIOFault`** | `BOOL` | `0` | Ẩn (Tag) | [Đầu vào nối dây I/O hoặc Logic] Trạng thái lỗi truyền thông của kênh đầu ra tương tự CV (1 = Lỗi truyền thông CV I/O, 0 = Tốt/OK) |
+| **`Inp_PVSrcQ`** | `DINT` | `0` | Ẩn (Tag) | [Đầu vào nối dây I/O hoặc Logic] Mã nguồn gốc và chất lượng tín hiệu PV đầu vào (kiểu liệt kê enum, nối từ chân SrcQ của khối kênh P_AIChan nếu có) |
+| **`Inp_PVNotify`** | `DINT` | `0` | Ẩn (Tag) | [Đầu vào nối dây I/O hoặc Logic] Mã mức độ ưu tiên cảnh báo và trạng thái xác nhận (enum) của đối tượng PV liên kết |
+| **`Inp_CVNotify`** | `DINT` | `0` | Ẩn (Tag) | [Đầu vào nối dây I/O hoặc Logic] Mã mức độ ưu tiên cảnh báo và xác nhận (enum) của đối tượng cơ cấu chấp hành CV liên kết phía sau |
+| **`Inp_CascSPNotify`** | `DINT` | `0` | Ẩn (Tag) | [Đầu vào nối dây I/O hoặc Logic] Mã mức độ ưu tiên cảnh báo và xác nhận (enum) của đối tượng cấp tín hiệu Cascade SP |
+| **`Inp_IntlkOK`** | `BOOL` | `1` | Hiện (Pin) | [Đầu vào nối dây I/O hoặc Logic] Tín hiệu tổng hợp Khóa liên động an toàn có thể Bypass (1 = Liên động OK cho phép chạy; 0 = Cắt dừng thiết bị ngay lập tức; nối từ P_Intlk.Sts_IntlkOK) |
+| **`Inp_NBIntlkOK`** | `BOOL` | `1` | Hiện (Pin) | [Đầu vào nối dây I/O hoặc Logic] Tín hiệu tổng hợp Khóa liên động an toàn KHÔNG thể Bypass (1 = Liên động bất khả kháng OK; 0 = Cắt dừng thiết bị ngay lập tức; nối từ P_Intlk.Sts_NBIntlkOK) |
+| **`Inp_Hand`** | `BOOL` | `0` | Hiện (Pin) | [Đầu vào nối dây I/O hoặc Logic] Tín hiệu chọn chế độ Điều khiển bằng tay tại chỗ (Hand/Local): 1 = Chiếm quyền sang chế độ Hand (thường nối từ công tắc cứng tại tủ MCC); 0 = Nhả chế độ Hand |
+| **`Inp_HandFdbk`** | `REAL` | `0` | Ẩn (Tag) | [Đầu vào nối dây I/O hoặc Logic] Giá trị phản hồi vị trí thực tế của cơ cấu chấp hành khi ở chế độ Bằng tay tại chỗ (Hand/Tieback Feedback, đơn vị CVEU) |
+| **`Inp_HandFdbkBad`** | `BOOL` | `0` | Ẩn (Tag) | [Đầu vào nối dây I/O hoặc Logic] Trạng thái lỗi chất lượng hoặc mất truyền thông của tín hiệu phản hồi Inp_HandFdbk (1 = Lỗi/Bad, 0 = Tốt/OK) |
+| **`Inp_Ovrd`** | `BOOL` | `0` | Ẩn (Tag) | [Đầu vào nối dây I/O hoặc Logic] Tín hiệu kích hoạt chế độ Cưỡng bức ưu tiên (Override): 1 = Chiếm quyền sang chế độ Override; 0 = Nhả chế độ Override |
+| **`Inp_OvrdCmd`** | `DINT` | `0` | Ẩn (Tag) | [Đầu vào nối dây I/O hoặc Logic] Mã lệnh chọn chế độ vòng PID khi ở chế độ Cưỡng bức (Override): 0 = Không đổi chế độ, 1 = Chuyển sang Bằng tay (Manual), 2 = Chuyển sang Tự động (Auto), 3 = Chuyển sang Tầng/Tỷ lệ (Cascade/Ratio), 4 = Chuyển về Mặc định (Normal) |
+| **`Inp_OvrdRatio`** | `REAL` | `1` | Ẩn (Tag) | [Đầu vào nối dây I/O hoặc Logic] Hệ số tỷ lệ (Ratio) khi vòng điều khiển ở chế độ Cưỡng bức (Override Ratio) |
+| **`Inp_OvrdSP`** | `REAL` | `0` | Ẩn (Tag) | [Đầu vào nối dây I/O hoặc Logic] Giá trị đặt Setpoint (SP) khi vòng điều khiển ở chế độ Cưỡng bức (Override SP, đơn vị PVEU) |
+| **`Inp_OvrdCV`** | `REAL` | `0` | Ẩn (Tag) | [Đầu vào nối dây I/O hoặc Logic] Giá trị đặt biến điều khiển CV khi ở chế độ Cưỡng bức (Override CV Target, đơn vị kỹ thuật EU) |
+| **`Inp_OvrdSPTarget`** | `REAL` | `0` | Ẩn (Tag) | [Đầu vào nối dây I/O hoặc Logic] Giá trị đích cuối cùng của quá trình Ramp SP khi ở chế độ Cưỡng bức (đơn vị PVEU) |
+| **`Inp_OvrdSPRampT`** | `REAL` | `0` | Ẩn (Tag) | [Đầu vào nối dây I/O hoặc Logic] Thời gian tăng/giảm SP theo độ dốc khi ở chế độ Cưỡng bức (0.0 đến 28800.0 giây) |
+| **`Inp_OvrdSPRoCLimInc`** | `REAL` | `0` | Ẩn (Tag) | [Đầu vào nối dây I/O hoặc Logic] Giới hạn tốc độ tăng SP tối đa khi ở chế độ Cưỡng bức (PVEU/giây) |
+| **`Inp_OvrdSPRoCLimDec`** | `REAL` | `0` | Ẩn (Tag) | [Đầu vào nối dây I/O hoặc Logic] Giới hạn tốc độ giảm SP tối đa khi ở chế độ Cưỡng bức (PVEU/giây) |
+| **`Inp_ExtInh`** | `BOOL` | `0` | Ẩn (Tag) | [Đầu vào nối dây I/O hoặc Logic] Chân khóa cấm nguồn lệnh ngoài (External Inhibit): 1 = Cấm chế độ External chiếm quyền điều khiển; 0 = Cho phép External chiếm quyền |
+| **`Inp_HiHiDevGate`** | `BOOL` | `1` | Ẩn (Tag) | [Đầu vào nối dây I/O hoặc Logic] Chân cổng điều kiện (Gate Input) cho phép giám sát độ lệch Rất Cao (High-High Deviation): Khi = 1, bật kiểm tra ngưỡng (áp dụng bộ định thời On-Delay/Off-Delay sau thời gian trễ mở cổng Gate Delay); khi = 0, tắt giám sát và ức chế cảnh báo (dùng khi thiết bị công nghệ đang dừng) |
+| **`Inp_HiDevGate`** | `BOOL` | `1` | Ẩn (Tag) | [Đầu vào nối dây I/O hoặc Logic] Chân cổng điều kiện (Gate Input) cho phép giám sát độ lệch Cao (High Deviation): Khi = 1, bật kiểm tra ngưỡng (áp dụng bộ định thời On-Delay/Off-Delay sau thời gian trễ mở cổng Gate Delay); khi = 0, tắt giám sát và ức chế cảnh báo (dùng khi thiết bị công nghệ đang dừng) |
+| **`Inp_LoDevGate`** | `BOOL` | `1` | Ẩn (Tag) | [Đầu vào nối dây I/O hoặc Logic] Chân cổng điều kiện (Gate Input) cho phép giám sát độ lệch Thấp (Low Deviation): Khi = 1, bật kiểm tra ngưỡng (áp dụng bộ định thời On-Delay/Off-Delay sau thời gian trễ mở cổng Gate Delay); khi = 0, tắt giám sát và ức chế cảnh báo (dùng khi thiết bị công nghệ đang dừng) |
+| **`Inp_LoLoDevGate`** | `BOOL` | `1` | Ẩn (Tag) | [Đầu vào nối dây I/O hoặc Logic] Chân cổng điều kiện (Gate Input) cho phép giám sát độ lệch Rất Thấp (Low-Low Deviation): Khi = 1, bật kiểm tra ngưỡng (áp dụng bộ định thời On-Delay/Off-Delay sau thời gian trễ mở cổng Gate Delay); khi = 0, tắt giám sát và ức chế cảnh báo (dùng khi thiết bị công nghệ đang dừng) |
+| **`Inp_Reset`** | `BOOL` | `0` | Ẩn (Tag) | [Đầu vào nối dây I/O hoặc Logic] Chân nhận xung xóa lỗi từ chương trình PLC: Khi = 1, xóa tất cả các cảnh báo chốt (Latched) và chốt ngắt bảo vệ (Shed) đã hết điều kiện lỗi |
+| **`Cfg_HasMoreObj`** | `BOOL` | `0` | Ẩn (Tag) | [Biến cấu hình thông số] 1 = Báo cho HMI biết có đối tượng mở rộng thông tin đi kèm để bật nút điều hướng mở cửa sổ chi tiết |
+| **`Cfg_HasRatio`** | `BOOL` | `0` | Ẩn (Tag) | [Biến cấu hình thông số] Chế độ hoạt động khi chọn Cascade: 1 = Điều khiển theo Tỷ lệ (Ratio Control, nhân Inp_CascSP với hệ số Ratio); 0 = Điều khiển Tầng chuẩn (Cascade Control) |
+| **`Cfg_HasCasc`** | `BOOL` | `0` | Ẩn (Tag) | [Biến cấu hình thông số] 1 = Cho phép chuyển vòng điều khiển sang chế độ Điều khiển tầng / Tỷ lệ (Cascade / Ratio Mode) |
+| **`Cfg_HasAuto`** | `BOOL` | `1` | Ẩn (Tag) | [Biến cấu hình thông số] 1 = Cho phép chuyển vòng điều khiển sang chế độ Tự động (Automatic Mode) |
+| **`Cfg_HasMan`** | `BOOL` | `1` | Ẩn (Tag) | [Biến cấu hình thông số] 1 = Cho phép chuyển vòng điều khiển sang chế độ Bằng tay (Manual Mode) |
+| **`Cfg_HasSPRamp`** | `BOOL` | `0` | Ẩn (Tag) | [Biến cấu hình thông số] 1 = Bật công cụ thay đổi giá trị đặt SP theo độ dốc (Setpoint Ramp Wizard) trên HMI |
+| **`Cfg_LockLM`** | `BOOL` | `0` | Ẩn (Tag) | [Biến cấu hình thông số] 1 = Khóa cứng vòng điều khiển ở chế độ Mặc định chuẩn (Cfg_NormLM); 0 = Cho phép chuyển đổi chế độ linh hoạt |
+| **`Cfg_PVTrack`** | `BOOL` | `0` | Ẩn (Tag) | [Biến cấu hình thông số] 1 = Cho phép giá trị đặt SP tự động bám theo PV thực tế (SP Tracks PV) khi vòng PID ở chế độ Bằng tay (Manual); 0 = Giữ nguyên SP |
+| **`Cfg_CtrlAction`** | `BOOL` | `0` | Ẩn (Tag) | [Biến cấu hình thông số] Chiều tác động điều khiển của bộ PID: 1 = Tác động Thuận (Direct Acting: E = PV - SP, PV tăng thì CV tăng — ví dụ làm mát/xả áp); 0 = Tác động Nghịch (Reverse Acting: E = SP - PV, PV giảm thì CV tăng — ví dụ gia nhiệt/cấp áp) |
+| **`Cfg_Depend`** | `BOOL` | `0` | Ẩn (Tag) | [Biến cấu hình thông số] Kiểu phương trình thuật toán PID: 1 = Hệ số khuếch đại Phụ thuộc (Dependent Gains — ISA Standard); 0 = Hệ số khuếch đại Độc lập (Independent Gains) |
+| **`Cfg_DerivSmooth`** | `BOOL` | `0` | Ẩn (Tag) | [Biến cấu hình thông số] 1 = Bật bộ lọc làm mịn thành phần Vi phân (Derivative Smoothing) để giảm nhiễu tần số cao |
+| **`Cfg_ZCOff`** | `BOOL` | `0` | Ẩn (Tag) | [Biến cấu hình thông số] 1 = Chỉ cần sai lệch nằm trong vùng chết là ngừng chỉnh CV (không bắt buộc sai lệch phải đổi dấu đi qua điểm 0); 0 = Sai lệch phải đi qua điểm 0 mới kích hoạt vùng chết |
+| **`Cfg_PropSPAct`** | `BOOL` | `0` | Ẩn (Tag) | [Biến cấu hình thông số] Cách tính thành phần Tỷ lệ (P): 0 = Tính trên độ biến thiên của PV (chống vọt lố CV khi thay đổi SP đột ngột); 1 = Tính trên sai lệch E = SP - PV |
+| **`Cfg_DerivSPAct`** | `BOOL` | `1` | Ẩn (Tag) | [Biến cấu hình thông số] Cách tính thành phần Vi phân (D): 0 = Tính trên độ biến thiên của PV (tránh xung đạo hàm vọt lố khi đổi SP); 1 = Tính trên sai lệch E = SP - PV |
+| **`Cfg_LimitManCV`** | `BOOL` | `0` | Ẩn (Tag) | [Biến cấu hình thông số] 1 = Áp dụng kẹp giới hạn Cfg_MinCV..Cfg_MaxCV ngay cả khi điều khiển bằng tay (Manual); 0 = Không giới hạn CV ở chế độ Manual |
+| **`Cfg_InitToMan`** | `BOOL` | `0` | Ẩn (Tag) | [Biến cấu hình thông số] 1 = Tự động chuyển vòng điều khiển về chế độ Manual khi nhận yêu cầu khởi tạo; 0 = Giữ nguyên chế độ |
+| **`Cfg_SetTrack`** | `BOOL` | `1` | Ẩn (Tag) | [Biến cấu hình thông số] 1 = Cho phép các giá trị đặt (PSet_CV / OSet_CV / SP) tự động bám theo ngõ ra thực tế hiện hành để chuyển mạch không giật (Bumpless Transfer) giữa Operator và Program |
+| **`Cfg_SetTrackOvrdHand`** | `BOOL` | `0` | Ẩn (Tag) | [Biến cấu hình thông số] 1 = Cho phép giá trị đặt của Program và Operator tự động bám theo giá trị CV khi đang ở chế độ Override hoặc Hand |
+| **`Cfg_SkipSPRoCLim`** | `REAL` | `0` | Ẩn (Tag) | [Biến cấu hình thông số] 1 = Bỏ qua bộ giới hạn tốc độ thay đổi SP khi ở chế độ Bảo trì, Cưỡng bức (Override) hoặc khi ngắt Liên động |
+| **`Cfg_HasIntlkObj`** | `BOOL` | `0` | Ẩn (Tag) | [Biến cấu hình thông số] 1 = Báo cho HMI biết có khối Khóa liên động (P_Intlk) nối vào chân Inp_IntlkOK và bật nút điều hướng mở Faceplate P_Intlk |
+| **`Cfg_HasCascSPNav`** | `BOOL` | `0` | Ẩn (Tag) | [Biến cấu hình thông số] 1 = Cho phép hiển thị nút điều hướng nhảy tới Faceplate của khối cấp tín hiệu Cascade SP trên HMI |
+| **`Cfg_HasPVNav`** | `BOOL` | `0` | Ẩn (Tag) | [Biến cấu hình thông số] 1 = Cho phép hiển thị nút điều hướng nhảy tới Faceplate của khối cảm biến PV trên HMI |
+| **`Cfg_HasCVNav`** | `BOOL` | `0` | Ẩn (Tag) | [Biến cấu hình thông số] 1 = Cho phép hiển thị nút điều hướng nhảy tới Faceplate của khối cơ cấu chấp hành CV trên HMI |
+| **`Cfg_OvrdIntlk`** | `BOOL` | `0` | Ẩn (Tag) | [Biến cấu hình thông số] 1 = Chế độ Override được quyền bỏ qua các điều kiện Khóa liên động (Interlocks) có thể bypass; 0 = Luôn kiểm tra Interlocks |
+| **`Cfg_IntlkTripLatch`** | `BOOL` | `0` | Ẩn (Tag) | [Biến cấu hình thông số] 1 = Tự chốt giữ trạng thái ngắt liên động của vòng PID cho đến khi nhấn Reset; 0 = Tự phục hồi ngay khi liên động OK trở lại |
+| **`Cfg_SPFailLatch`** | `BOOL` | `0` | Ẩn (Tag) | [Biến cấu hình thông số] 1 = Tự chốt giữ trạng thái bảo vệ khi lỗi Cascade SP cho đến khi nhấn Reset; 0 = Tự phục hồi khi SP tốt trở lại |
+| **`Cfg_PVFailLatch`** | `BOOL` | `0` | Ẩn (Tag) | [Biến cấu hình thông số] 1 = Tự chốt giữ (Latch) trạng thái bảo vệ khi lỗi PV cho đến khi nhấn Reset; 0 = Tự phục hồi ngay khi PV tốt trở lại |
+| **`Cfg_CVFailLatch`** | `BOOL` | `0` | Ẩn (Tag) | [Biến cấu hình thông số] 1 = Tự chốt giữ trạng thái bảo vệ khi lỗi kênh CV cho đến khi nhấn Reset; 0 = Tự phục hồi khi hết lỗi |
+| **`Cfg_NormLM`** | `DINT` | `0` | Ẩn (Tag) | [Biến cấu hình thông số] Chế độ vòng điều khiển chuẩn mặc định (Normal Loop Mode): 0 = Vô hiệu hóa, 1 = Manual, 2 = Auto, 3 = Cascade |
+| **`Cfg_PwrupLM`** | `DINT` | `0` | Ẩn (Tag) | [Biến cấu hình thông số] Chế độ vòng điều khiển khi vừa bật nguồn PLC (Powerup Loop Mode): 0 = Giữ chế độ trước khi mất điện, 1 = Manual (với Cfg_PwrupCV), 2 = Auto (với Cfg_PwrupSP), 3 = Cascade, 4 = Normal Mode |
+| **`Cfg_IntlkTripSPAct`** | `DINT` | `0` | Ẩn (Tag) | [Biến cấu hình thông số] Hành động xử lý SP khi vi phạm Khóa liên động: 0 = Giữ nguyên, 1 = Giữ SP tốt cuối cùng, 2 = Đưa SP về Cfg_IntlkSP, 3 = Đặt SP bằng PV hiện tại |
+| **`Cfg_SPFailSPAct`** | `DINT` | `1` | Ẩn (Tag) | [Biến cấu hình thông số] Hành động xử lý SP khi tín hiệu Cascade SP bị lỗi: 1 = Giữ SP tốt cuối cùng, 2 = Đưa SP về Cfg_IntlkSP, 3 = Đặt SP bằng giá trị PV hiện tại |
+| **`Cfg_PVFailSPAct`** | `DINT` | `0` | Ẩn (Tag) | [Biến cấu hình thông số] Hành động xử lý giá trị đặt SP khi cảm biến PV bị lỗi: 0 = Giữ nguyên SP, 1 = Giữ SP tốt cuối cùng, 2 = Đưa SP về Cfg_IntlkSP |
+| **`Cfg_CVFailSPAct`** | `DINT` | `0` | Ẩn (Tag) | [Biến cấu hình thông số] Hành động xử lý SP khi kênh xuất CV bị lỗi: 0 = Giữ nguyên, 1 = Giữ SP tốt cuối cùng, 2 = Đưa SP về Cfg_IntlkSP, 3 = Đặt SP bằng PV hiện tại |
+| **`Cfg_IntlkTripCVAct`** | `DINT` | `2` | Ẩn (Tag) | [Biến cấu hình thông số] Hành động xử lý ngõ ra CV khi vi phạm Khóa liên động: 0 = Không can thiệp, 1 = Giữ CV tốt cuối cùng, 2 = Đưa CV về giá trị an toàn Cfg_IntlkCV |
+| **`Cfg_SPFailCVAct`** | `DINT` | `1` | Ẩn (Tag) | [Biến cấu hình thông số] Hành động xử lý ngõ ra CV khi tín hiệu Cascade SP bị lỗi: 0 = Không can thiệp, 1 = Giữ CV tốt cuối cùng, 2 = Đưa CV về Cfg_IntlkCV |
+| **`Cfg_PVFailCVAct`** | `DINT` | `1` | Ẩn (Tag) | [Biến cấu hình thông số] Hành động xử lý ngõ ra CV khi cảm biến PV bị lỗi: 1 = Giữ nguyên giá trị CV tốt cuối cùng (Hold Last Good), 2 = Đưa CV về giá trị an toàn Cfg_IntlkCV |
+| **`Cfg_CVFailCVAct`** | `DINT` | `1` | Ẩn (Tag) | [Biến cấu hình thông số] Hành động xử lý ngõ ra CV khi kênh xuất CV bị lỗi: 1 = Giữ CV tốt cuối cùng, 2 = Đưa CV về Cfg_IntlkCV |
+| **`Cfg_IntlkTripLMAct`** | `DINT` | `0` | Ẩn (Tag) | [Biến cấu hình thông số] Hành động chuyển chế độ vòng PID khi vi phạm Khóa liên động (Interlock Trip): 0 = Giữ nguyên, 1 = Ép về Manual, 2 = Chuyển về Auto hoặc Manual |
+| **`Cfg_SPFailLMAct`** | `DINT` | `0` | Ẩn (Tag) | [Biến cấu hình thông số] Hành động chuyển chế độ vòng PID khi tín hiệu Cascade SP bị lỗi: 0 = Giữ nguyên, 1 = Ép về Manual, 2 = Chuyển về Auto hoặc Manual |
+| **`Cfg_PVFailLMAct`** | `DINT` | `0` | Ẩn (Tag) | [Biến cấu hình thông số] Hành động chuyển chế độ vòng PID khi cảm biến PV bị lỗi (PV Fail): 0 = Giữ nguyên chế độ, 1 = Ép về Manual, 2 = Chỉ cho phép Auto hoặc Manual (thoát Cascade) |
+| **`Cfg_CVFailLMAct`** | `DINT` | `0` | Ẩn (Tag) | [Biến cấu hình thông số] Hành động chuyển chế độ vòng PID khi kênh xuất CV bị lỗi: 0 = Giữ nguyên, 1 = Ép về Manual, 2 = Chuyển về Auto hoặc Manual |
+| **`Cfg_PVDecPlcs`** | `DINT` | `2` | Ẩn (Tag) | [Biến cấu hình thông số] Số chữ số thập phân hiển thị cho giá trị PV trên màn hình HMI (từ 0 đến 6 chữ số) |
+| **`Cfg_CVDecPlcs`** | `DINT` | `2` | Ẩn (Tag) | [Biến cấu hình thông số] Số chữ số thập phân hiển thị cho giá trị ngõ ra CV trên màn hình HMI (từ 0 đến 6 chữ số) |
+| **`Cfg_HasHiHiDevAlm`** | `BOOL` | `0` | Ẩn (Tag) | [Biến cấu hình thông số] Cấu hình bật/tắt cảnh báo độ lệch Rất Cao (High-High Deviation): 1 = Có sử dụng và giám sát cảnh báo này; 0 = Vô hiệu hóa cảnh báo |
+| **`Cfg_HasHiDevAlm`** | `BOOL` | `0` | Ẩn (Tag) | [Biến cấu hình thông số] Cấu hình bật/tắt cảnh báo độ lệch Cao (High Deviation): 1 = Có sử dụng và giám sát cảnh báo này; 0 = Vô hiệu hóa cảnh báo |
+| **`Cfg_HasLoDevAlm`** | `BOOL` | `0` | Ẩn (Tag) | [Biến cấu hình thông số] Cấu hình bật/tắt cảnh báo độ lệch Thấp (Low Deviation): 1 = Có sử dụng và giám sát cảnh báo này; 0 = Vô hiệu hóa cảnh báo |
+| **`Cfg_HasLoLoDevAlm`** | `BOOL` | `0` | Ẩn (Tag) | [Biến cấu hình thông số] Cấu hình bật/tắt cảnh báo độ lệch Rất Thấp (Low-Low Deviation): 1 = Có sử dụng và giám sát cảnh báo này; 0 = Vô hiệu hóa cảnh báo |
+| **`Cfg_HasIntlkTripAlm`** | `BOOL` | `0` | Ẩn (Tag) | [Biến cấu hình thông số] Cấu hình bật/tắt cảnh báo ngắt bảo vệ do vi phạm Khóa liên động (Interlock Trip): 1 = Có sử dụng và giám sát cảnh báo này; 0 = Vô hiệu hóa cảnh báo |
+| **`Cfg_HasFailAlm`** | `BOOL` | `0` | Ẩn (Tag) | [Biến cấu hình thông số] Cấu hình bật/tắt cảnh báo lỗi tín hiệu / hỏng kênh đo (Signal Failure): 1 = Có sử dụng và giám sát cảnh báo này; 0 = Vô hiệu hóa cảnh báo |
+| **`Cfg_HiHiDevResetReqd`** | `BOOL` | `0` | Ẩn (Tag) | [Biến cấu hình thông số] Cấu hình yêu cầu nhấn Reset để xóa cảnh báo độ lệch Rất Cao (High-High Deviation): 1 = Tự chốt giữ (Latch) cảnh báo và bắt buộc phải gửi lệnh Reset sau khi hết điều kiện lỗi mới xóa được; 0 = Tự động xóa cảnh báo ngay khi tín hiệu trở về bình thường |
+| **`Cfg_HiDevResetReqd`** | `BOOL` | `0` | Ẩn (Tag) | [Biến cấu hình thông số] Cấu hình yêu cầu nhấn Reset để xóa cảnh báo độ lệch Cao (High Deviation): 1 = Tự chốt giữ (Latch) cảnh báo và bắt buộc phải gửi lệnh Reset sau khi hết điều kiện lỗi mới xóa được; 0 = Tự động xóa cảnh báo ngay khi tín hiệu trở về bình thường |
+| **`Cfg_LoDevResetReqd`** | `BOOL` | `0` | Ẩn (Tag) | [Biến cấu hình thông số] Cấu hình yêu cầu nhấn Reset để xóa cảnh báo độ lệch Thấp (Low Deviation): 1 = Tự chốt giữ (Latch) cảnh báo và bắt buộc phải gửi lệnh Reset sau khi hết điều kiện lỗi mới xóa được; 0 = Tự động xóa cảnh báo ngay khi tín hiệu trở về bình thường |
+| **`Cfg_LoLoDevResetReqd`** | `BOOL` | `0` | Ẩn (Tag) | [Biến cấu hình thông số] Cấu hình yêu cầu nhấn Reset để xóa cảnh báo độ lệch Rất Thấp (Low-Low Deviation): 1 = Tự chốt giữ (Latch) cảnh báo và bắt buộc phải gửi lệnh Reset sau khi hết điều kiện lỗi mới xóa được; 0 = Tự động xóa cảnh báo ngay khi tín hiệu trở về bình thường |
+| **`Cfg_IntlkTripResetReqd`** | `BOOL` | `0` | Ẩn (Tag) | [Biến cấu hình thông số] Cấu hình yêu cầu nhấn Reset để xóa cảnh báo ngắt bảo vệ do vi phạm Khóa liên động (Interlock Trip): 1 = Tự chốt giữ (Latch) cảnh báo và bắt buộc phải gửi lệnh Reset sau khi hết điều kiện lỗi mới xóa được; 0 = Tự động xóa cảnh báo ngay khi tín hiệu trở về bình thường |
+| **`Cfg_FailResetReqd`** | `BOOL` | `0` | Ẩn (Tag) | [Biến cấu hình thông số] Cấu hình yêu cầu nhấn Reset để xóa cảnh báo lỗi tín hiệu / hỏng kênh đo (Signal Failure): 1 = Tự chốt giữ (Latch) cảnh báo và bắt buộc phải gửi lệnh Reset sau khi hết điều kiện lỗi mới xóa được; 0 = Tự động xóa cảnh báo ngay khi tín hiệu trở về bình thường |
+| **`Cfg_HiHiDevAckReqd`** | `BOOL` | `1` | Ẩn (Tag) | [Biến cấu hình thông số] Cấu hình yêu cầu Xác nhận (Acknowledge) cho cảnh báo độ lệch Rất Cao (High-High Deviation): 1 = Bắt buộc người vận hành hoặc chương trình phải gửi lệnh Ack khi có báo động; 0 = Tự động xác nhận ngay khi báo động xuất hiện |
+| **`Cfg_HiDevAckReqd`** | `BOOL` | `1` | Ẩn (Tag) | [Biến cấu hình thông số] Cấu hình yêu cầu Xác nhận (Acknowledge) cho cảnh báo độ lệch Cao (High Deviation): 1 = Bắt buộc người vận hành hoặc chương trình phải gửi lệnh Ack khi có báo động; 0 = Tự động xác nhận ngay khi báo động xuất hiện |
+| **`Cfg_LoDevAckReqd`** | `BOOL` | `1` | Ẩn (Tag) | [Biến cấu hình thông số] Cấu hình yêu cầu Xác nhận (Acknowledge) cho cảnh báo độ lệch Thấp (Low Deviation): 1 = Bắt buộc người vận hành hoặc chương trình phải gửi lệnh Ack khi có báo động; 0 = Tự động xác nhận ngay khi báo động xuất hiện |
+| **`Cfg_LoLoDevAckReqd`** | `BOOL` | `1` | Ẩn (Tag) | [Biến cấu hình thông số] Cấu hình yêu cầu Xác nhận (Acknowledge) cho cảnh báo độ lệch Rất Thấp (Low-Low Deviation): 1 = Bắt buộc người vận hành hoặc chương trình phải gửi lệnh Ack khi có báo động; 0 = Tự động xác nhận ngay khi báo động xuất hiện |
+| **`Cfg_IntlkTripAckReqd`** | `BOOL` | `1` | Ẩn (Tag) | [Biến cấu hình thông số] Cấu hình yêu cầu Xác nhận (Acknowledge) cho cảnh báo ngắt bảo vệ do vi phạm Khóa liên động (Interlock Trip): 1 = Bắt buộc người vận hành hoặc chương trình phải gửi lệnh Ack khi có báo động; 0 = Tự động xác nhận ngay khi báo động xuất hiện |
+| **`Cfg_FailAckReqd`** | `BOOL` | `1` | Ẩn (Tag) | [Biến cấu hình thông số] Cấu hình yêu cầu Xác nhận (Acknowledge) cho cảnh báo lỗi tín hiệu / hỏng kênh đo (Signal Failure): 1 = Bắt buộc người vận hành hoặc chương trình phải gửi lệnh Ack khi có báo động; 0 = Tự động xác nhận ngay khi báo động xuất hiện |
+| **`Cfg_HiHiDevSeverity`** | `DINT` | `750` | Ẩn (Tag) | [Biến cấu hình thông số] Mức độ nghiêm trọng (Severity) của cảnh báo độ lệch Rất Cao (High-High Deviation) để điều khiển màu sắc và ưu tiên trên HMI: 1..250 = Thấp (Low), 251..500 = Trung bình (Medium), 501..750 = Cao (High), 751..1000 = Khẩn cấp (Urgent) |
+| **`Cfg_HiDevSeverity`** | `DINT` | `500` | Ẩn (Tag) | [Biến cấu hình thông số] Mức độ nghiêm trọng (Severity) của cảnh báo độ lệch Cao (High Deviation) để điều khiển màu sắc và ưu tiên trên HMI: 1..250 = Thấp (Low), 251..500 = Trung bình (Medium), 501..750 = Cao (High), 751..1000 = Khẩn cấp (Urgent) |
+| **`Cfg_LoDevSeverity`** | `DINT` | `500` | Ẩn (Tag) | [Biến cấu hình thông số] Mức độ nghiêm trọng (Severity) của cảnh báo độ lệch Thấp (Low Deviation) để điều khiển màu sắc và ưu tiên trên HMI: 1..250 = Thấp (Low), 251..500 = Trung bình (Medium), 501..750 = Cao (High), 751..1000 = Khẩn cấp (Urgent) |
+| **`Cfg_LoLoDevSeverity`** | `DINT` | `750` | Ẩn (Tag) | [Biến cấu hình thông số] Mức độ nghiêm trọng (Severity) của cảnh báo độ lệch Rất Thấp (Low-Low Deviation) để điều khiển màu sắc và ưu tiên trên HMI: 1..250 = Thấp (Low), 251..500 = Trung bình (Medium), 501..750 = Cao (High), 751..1000 = Khẩn cấp (Urgent) |
+| **`Cfg_IntlkTripSeverity`** | `DINT` | `500` | Ẩn (Tag) | [Biến cấu hình thông số] Mức độ nghiêm trọng (Severity) của cảnh báo ngắt bảo vệ do vi phạm Khóa liên động (Interlock Trip) để điều khiển màu sắc và ưu tiên trên HMI: 1..250 = Thấp (Low), 251..500 = Trung bình (Medium), 501..750 = Cao (High), 751..1000 = Khẩn cấp (Urgent) |
+| **`Cfg_FailSeverity`** | `DINT` | `1000` | Ẩn (Tag) | [Biến cấu hình thông số] Mức độ nghiêm trọng (Severity) của cảnh báo lỗi tín hiệu / hỏng kênh đo (Signal Failure) để điều khiển màu sắc và ưu tiên trên HMI: 1..250 = Thấp (Low), 251..500 = Trung bình (Medium), 501..750 = Cao (High), 751..1000 = Khẩn cấp (Urgent) |
+| **`Cfg_MinRatio`** | `REAL` | `1` | Ẩn (Tag) | [Biến cấu hình thông số] Giới hạn dưới tối thiểu của hệ số tỷ lệ (Ratio Min) khi chạy chế độ Ratio |
+| **`Cfg_MaxRatio`** | `REAL` | `1` | Ẩn (Tag) | [Biến cấu hình thông số] Giới hạn trên tối đa của hệ số tỷ lệ (Ratio Max) khi chạy chế độ Ratio |
+| **`Cfg_MinSP`** | `REAL` | `0` | Ẩn (Tag) | [Biến cấu hình thông số] Giới hạn dưới tối thiểu cho phép nhập của giá trị đặt Setpoint (SP Min, đơn vị PVEU) |
+| **`Cfg_MaxSP`** | `REAL` | `100` | Ẩn (Tag) | [Biến cấu hình thông số] Giới hạn trên tối đa cho phép nhập của giá trị đặt Setpoint (SP Max, đơn vị PVEU) |
+| **`Cfg_MaxSPRoCInc`** | `REAL` | `0` | Ẩn (Tag) | [Biến cấu hình thông số] Giới hạn trần tối đa cho tốc độ tăng SP (Maximum SP Positive Rate of Change, đơn vị PVEU/giây) |
+| **`Cfg_MaxSPRoCDec`** | `REAL` | `0` | Ẩn (Tag) | [Biến cấu hình thông số] Giới hạn trần tối đa cho tốc độ giảm SP (Maximum SP Negative Rate of Change, đơn vị PVEU/giây) |
+| **`Cfg_SPRampMaxDev`** | `REAL` | `0` | Ẩn (Tag) | [Biến cấu hình thông số] Độ lệch tối đa giữa PV và SP trong khi đang Ramp: nếu PV tụt lại quá ngưỡng này, quá trình Ramp SP sẽ tạm dừng chờ PV đuổi kịp (0.0 = không bao giờ tạm dừng) |
+| **`Cfg_PVEUMin`** | `REAL` | `0` | Ẩn (Tag) | [Biến cấu hình thông số] Giá trị đơn vị kỹ thuật tương ứng với Raw Min (PV EU Min — hỗ trợ cả quy đổi ngược nếu đặt EUMin > EUMax) |
+| **`Cfg_PVEUMax`** | `REAL` | `100` | Ẩn (Tag) | [Biến cấu hình thông số] Giá trị đơn vị kỹ thuật tương ứng với Raw Max (PV EU Max — hỗ trợ cả quy đổi ngược nếu đặt EUMax < EUMin) |
+| **`Cfg_CVEUMin`** | `REAL` | `0` | Ẩn (Tag) | [Biến cấu hình thông số] Giá trị đơn vị kỹ thuật đầu ra CV tương ứng với Cfg_CVRawMin (thường là 0.0%) |
+| **`Cfg_CVEUMax`** | `REAL` | `100` | Ẩn (Tag) | [Biến cấu hình thông số] Giá trị đơn vị kỹ thuật đầu ra CV tương ứng với Cfg_CVRawMax (thường là 100.0%) |
+| **`Cfg_CVRawMin`** | `REAL` | `0` | Ẩn (Tag) | [Biến cấu hình thông số] Giá trị thô đầu ra tối thiểu (CV Raw Min) gửi ra thẻ Analog Output tương ứng với Cfg_CVEUMin |
+| **`Cfg_CVRawMax`** | `REAL` | `100` | Ẩn (Tag) | [Biến cấu hình thông số] Giá trị thô đầu ra tối đa (CV Raw Max) gửi ra thẻ Analog Output tương ứng với Cfg_CVEUMax |
+| **`Cfg_ExecT`** | `REAL` | `0` | Ẩn (Tag) | [Biến cấu hình thông số] Chu kỳ thời gian lấy mẫu thực thi thuật toán PID (Execution Interval, tính bằng giây) |
+| **`Cfg_PGain`** | `REAL` | `0` | Ẩn (Tag) | [Biến cấu hình thông số] Hệ số khuếch đại Tỷ lệ (Proportional Gain Kp hoặc Loop Gain Kc, không thứ nguyên) |
+| **`Cfg_IGain`** | `REAL` | `0` | Ẩn (Tag) | [Biến cấu hình thông số] Hệ số khuếch đại Tích phân (Integral Gain Ki, đơn vị 1/phút hoặc phút/lần lặp) |
+| **`Cfg_DGain`** | `REAL` | `0` | Ẩn (Tag) | [Biến cấu hình thông số] Hệ số khuếch đại Vi phân (Derivative Gain Kd, đơn vị phút) |
+| **`Cfg_ZCDB`** | `REAL` | `0` | Ẩn (Tag) | [Biến cấu hình thông số] Biên độ vùng chết qua điểm 0 (Zero-Crossing Deadband, đơn vị PVEU) quanh giá trị đặt SP mà trong đó CV được giữ nguyên |
+| **`Cfg_MinCV`** | `REAL` | `0` | Ẩn (Tag) | [Biến cấu hình thông số] Giới hạn kẹp dưới tối thiểu cho phép của ngõ ra điều khiển CV (Minimum CV Limit, đơn vị kỹ thuật EU) |
+| **`Cfg_MaxCV`** | `REAL` | `100` | Ẩn (Tag) | [Biến cấu hình thông số] Giới hạn kẹp trên tối đa cho phép của ngõ ra điều khiển CV (Maximum CV Limit, đơn vị kỹ thuật EU) |
+| **`Cfg_CVRoCLim`** | `REAL` | `0` | Ẩn (Tag) | [Biến cấu hình thông số] Giới hạn tốc độ biến thiên tối đa của ngõ ra điều khiển CV (CV Rate-of-Change Limit, đơn vị CVEU/giây) |
+| **`Cfg_MaxInactiveCV`** | `REAL` | `0` | Ẩn (Tag) | [Biến cấu hình thông số] Ngưỡng CV tối thiểu (đơn vị CVEU) để bật cờ báo thiết bị đang tích cực hoạt động (Sts_Active = 1 trên HMI) |
+| **`Cfg_IntlkSP`** | `REAL` | `0` | Ẩn (Tag) | [Biến cấu hình thông số] Giá trị đặt SP an toàn (đơn vị PVEU) được áp dụng khi xảy ra ngắt liên động hoặc lỗi tín hiệu |
+| **`Cfg_IntlkCV`** | `REAL` | `0` | Ẩn (Tag) | [Biến cấu hình thông số] Giá trị ngõ ra CV an toàn (đơn vị kỹ thuật EU) được xuất ra khi vi phạm Khóa liên động (nếu Cfg_ShedHold = 0) |
+| **`Cfg_PwrupSP`** | `REAL` | `0` | Ẩn (Tag) | [Biến cấu hình thông số] Giá trị đặt SP khởi tạo khi bật nguồn PLC (đơn vị PVEU, áp dụng khi Cfg_PwrupLM = 1 hoặc 2) |
+| **`Cfg_PwrupCV`** | `REAL` | `0` | Ẩn (Tag) | [Biến cấu hình thông số] Giá trị ngõ ra CV khởi tạo khi bật nguồn PLC (đơn vị CVEU, áp dụng khi Cfg_PwrupLM <> 0) |
+| **`Cfg_HiHiDevOnDly`** | `REAL` | `0` | Ẩn (Tag) | [Biến cấu hình thông số] Thời gian trễ tác động bật (On-Delay, tính bằng giây) cho độ lệch Rất Cao (High-High Deviation): Tín hiệu phải vi phạm ngưỡng liên tục đủ thời gian này mới kích hoạt trạng thái/báo động (lọc nhiễu thoáng qua) |
+| **`Cfg_HiDevOnDly`** | `REAL` | `0` | Ẩn (Tag) | [Biến cấu hình thông số] Thời gian trễ tác động bật (On-Delay, tính bằng giây) cho độ lệch Cao (High Deviation): Tín hiệu phải vi phạm ngưỡng liên tục đủ thời gian này mới kích hoạt trạng thái/báo động (lọc nhiễu thoáng qua) |
+| **`Cfg_LoDevOnDly`** | `REAL` | `0` | Ẩn (Tag) | [Biến cấu hình thông số] Thời gian trễ tác động bật (On-Delay, tính bằng giây) cho độ lệch Thấp (Low Deviation): Tín hiệu phải vi phạm ngưỡng liên tục đủ thời gian này mới kích hoạt trạng thái/báo động (lọc nhiễu thoáng qua) |
+| **`Cfg_LoLoDevOnDly`** | `REAL` | `0` | Ẩn (Tag) | [Biến cấu hình thông số] Thời gian trễ tác động bật (On-Delay, tính bằng giây) cho độ lệch Rất Thấp (Low-Low Deviation): Tín hiệu phải vi phạm ngưỡng liên tục đủ thời gian này mới kích hoạt trạng thái/báo động (lọc nhiễu thoáng qua) |
+| **`Cfg_HiHiDevOffDly`** | `REAL` | `0` | Ẩn (Tag) | [Biến cấu hình thông số] Thời gian trễ nhả tắt (Off-Delay, tính bằng giây) cho độ lệch Rất Cao (High-High Deviation): Tín hiệu phải trở về vùng an toàn (đã tính Deadband) liên tục đủ thời gian này mới xóa trạng thái/báo động |
+| **`Cfg_HiDevOffDly`** | `REAL` | `0` | Ẩn (Tag) | [Biến cấu hình thông số] Thời gian trễ nhả tắt (Off-Delay, tính bằng giây) cho độ lệch Cao (High Deviation): Tín hiệu phải trở về vùng an toàn (đã tính Deadband) liên tục đủ thời gian này mới xóa trạng thái/báo động |
+| **`Cfg_LoDevOffDly`** | `REAL` | `0` | Ẩn (Tag) | [Biến cấu hình thông số] Thời gian trễ nhả tắt (Off-Delay, tính bằng giây) cho độ lệch Thấp (Low Deviation): Tín hiệu phải trở về vùng an toàn (đã tính Deadband) liên tục đủ thời gian này mới xóa trạng thái/báo động |
+| **`Cfg_LoLoDevOffDly`** | `REAL` | `0` | Ẩn (Tag) | [Biến cấu hình thông số] Thời gian trễ nhả tắt (Off-Delay, tính bằng giây) cho độ lệch Rất Thấp (Low-Low Deviation): Tín hiệu phải trở về vùng an toàn (đã tính Deadband) liên tục đủ thời gian này mới xóa trạng thái/báo động |
+| **`Cfg_HiHiDevGateDly`** | `REAL` | `0` | Ẩn (Tag) | [Biến cấu hình thông số] Thời gian trễ mở cổng giám sát (Gate Delay, tính bằng giây) cho độ lệch Rất Cao (High-High Deviation): Khoảng thời gian chân cổng điều kiện (Gate Input) phải duy trì ở mức 1 trước khi bắt đầu cho phép giám sát ngưỡng |
+| **`Cfg_HiDevGateDly`** | `REAL` | `0` | Ẩn (Tag) | [Biến cấu hình thông số] Thời gian trễ mở cổng giám sát (Gate Delay, tính bằng giây) cho độ lệch Cao (High Deviation): Khoảng thời gian chân cổng điều kiện (Gate Input) phải duy trì ở mức 1 trước khi bắt đầu cho phép giám sát ngưỡng |
+| **`Cfg_LoDevGateDly`** | `REAL` | `0` | Ẩn (Tag) | [Biến cấu hình thông số] Thời gian trễ mở cổng giám sát (Gate Delay, tính bằng giây) cho độ lệch Thấp (Low Deviation): Khoảng thời gian chân cổng điều kiện (Gate Input) phải duy trì ở mức 1 trước khi bắt đầu cho phép giám sát ngưỡng |
+| **`Cfg_LoLoDevGateDly`** | `REAL` | `0` | Ẩn (Tag) | [Biến cấu hình thông số] Thời gian trễ mở cổng giám sát (Gate Delay, tính bằng giây) cho độ lệch Rất Thấp (Low-Low Deviation): Khoảng thời gian chân cổng điều kiện (Gate Input) phải duy trì ở mức 1 trước khi bắt đầu cho phép giám sát ngưỡng |
+| **`Cfg_HiHiDevLim`** | `REAL` | `1.5000000000000001E+38` | Ẩn (Tag) | [Biến cấu hình thông số] Ngưỡng giới hạn tác động (Threshold Limit) cho độ lệch Rất Cao (High-High Deviation) (tính theo đơn vị kỹ thuật EU) |
+| **`Cfg_HiHiDevDB`** | `REAL` | `0` | Ẩn (Tag) | [Biến cấu hình thông số] Vùng chết / độ trễ hồi tiếp (Deadband / Hysteresis, đơn vị EU) áp dụng cho ngưỡng độ lệch Rất Cao (High-High Deviation) nhằm chống hiện tượng báo động nhấp nháy lặp lại khi tín hiệu dao động quanh ngưỡng |
+| **`Cfg_HiDevLim`** | `REAL` | `1.5000000000000001E+38` | Ẩn (Tag) | [Biến cấu hình thông số] Ngưỡng giới hạn tác động (Threshold Limit) cho độ lệch Cao (High Deviation) (tính theo đơn vị kỹ thuật EU) |
+| **`Cfg_HiDevDB`** | `REAL` | `0` | Ẩn (Tag) | [Biến cấu hình thông số] Vùng chết / độ trễ hồi tiếp (Deadband / Hysteresis, đơn vị EU) áp dụng cho ngưỡng độ lệch Cao (High Deviation) nhằm chống hiện tượng báo động nhấp nháy lặp lại khi tín hiệu dao động quanh ngưỡng |
+| **`Cfg_LoDevLim`** | `REAL` | `1.5000000000000001E+38` | Ẩn (Tag) | [Biến cấu hình thông số] Ngưỡng giới hạn tác động (Threshold Limit) cho độ lệch Thấp (Low Deviation) (tính theo đơn vị kỹ thuật EU) |
+| **`Cfg_LoDevDB`** | `REAL` | `0` | Ẩn (Tag) | [Biến cấu hình thông số] Vùng chết / độ trễ hồi tiếp (Deadband / Hysteresis, đơn vị EU) áp dụng cho ngưỡng độ lệch Thấp (Low Deviation) nhằm chống hiện tượng báo động nhấp nháy lặp lại khi tín hiệu dao động quanh ngưỡng |
+| **`Cfg_LoLoDevLim`** | `REAL` | `1.5000000000000001E+38` | Ẩn (Tag) | [Biến cấu hình thông số] Ngưỡng giới hạn tác động (Threshold Limit) cho độ lệch Rất Thấp (Low-Low Deviation) (tính theo đơn vị kỹ thuật EU) |
+| **`Cfg_LoLoDevDB`** | `REAL` | `0` | Ẩn (Tag) | [Biến cấu hình thông số] Vùng chết / độ trễ hồi tiếp (Deadband / Hysteresis, đơn vị EU) áp dụng cho ngưỡng độ lệch Rất Thấp (Low-Low Deviation) nhằm chống hiện tượng báo động nhấp nháy lặp lại khi tín hiệu dao động quanh ngưỡng |
+| **`Cfg_OperKeep`** | `SINT` | `2#0000_0000` | Ẩn (Tag) | [Biến cấu hình thông số] Từ bit cấu hình cho phép Operator giữ quyền chỉnh thông số ngay cả khi khối ở chế độ Program (.0 = Giữ quyền chọn kênh PV, .1 = Giữ quyền chỉnh ngưỡng cảnh báo) |
+| **`Cfg_ProgKeep`** | `SINT` | `2#0000_0000` | Ẩn (Tag) | [Biến cấu hình thông số] Từ bit cấu hình cho phép Program giữ quyền chỉnh thông số ngay cả khi khối ở chế độ Operator (.0 = Giữ quyền chọn kênh PV, .1 = Giữ quyền chỉnh ngưỡng cảnh báo) |
+| **`Cfg_ExtKeep`** | `SINT` | `2#0000_0000` | Ẩn (Tag) | [Biến cấu hình thông số] Từ bit cấu hình cho phép External giữ quyền điều khiển khi ở Program/Operator (.0 = Giữ tốc độ đặt Reference, .1 = Giữ lệnh điều khiển Commands) |
+| **`PSet_Ratio`** | `REAL` | `1` | Ẩn (Tag) | [Giá trị đặt từ Chương trình PLC] Giá trị đặt từ Chương trình tự động (Program): Hệ số tỷ lệ (Ratio, không thứ nguyên) khi vòng điều khiển chạy ở chế độ Cascade/Ratio |
+| **`PSet_SP`** | `REAL` | `0` | Ẩn (Tag) | [Giá trị đặt từ Chương trình PLC] Giá trị đặt từ Chương trình tự động (Program): Giá trị đặt chính (Setpoint - SP, tính theo đơn vị kỹ thuật PV EU) khi chạy chế độ Tự động (Auto) |
+| **`PSet_SPRoCLimInc`** | `REAL` | `0` | Ẩn (Tag) | [Giá trị đặt từ Chương trình PLC] Giá trị đặt từ Chương trình tự động (Program): Giới hạn tốc độ tăng tối đa của giá trị đặt SP (Positive Rate-of-Change Limit, đơn vị PVEU/giây) |
+| **`PSet_SPRoCLimDec`** | `REAL` | `0` | Ẩn (Tag) | [Giá trị đặt từ Chương trình PLC] Giá trị đặt từ Chương trình tự động (Program): Giới hạn tốc độ giảm tối đa của giá trị đặt SP (Negative Rate-of-Change Limit, đơn vị PVEU/giây) |
+| **`PSet_SPTarget`** | `REAL` | `0` | Ẩn (Tag) | [Giá trị đặt từ Chương trình PLC] Giá trị đặt từ Chương trình tự động (Program): Giá trị đích cuối cùng của quá trình tăng/giảm SP theo độ dốc (Setpoint Ramp Target, đơn vị PVEU) |
+| **`PSet_SPRampT`** | `REAL` | `0` | Ẩn (Tag) | [Giá trị đặt từ Chương trình PLC] Giá trị đặt từ Chương trình tự động (Program): Thời gian tăng/giảm giá trị đặt SP đến đích (Setpoint Ramp Time, hợp lệ từ 0.0 đến 28800.0 giây) |
+| **`PSet_CV`** | `REAL` | `0` | Ẩn (Tag) | [Giá trị đặt từ Chương trình PLC] Giá trị đặt từ Chương trình tự động (Program): Giá trị biến điều khiển đầu ra (Controlled Variable - CV, tính theo đơn vị kỹ thuật EU) |
+| **`PSet_Owner`** | `DINT` | `0` | Ẩn (Tag) | [Giá trị đặt từ Chương trình PLC] Giá trị đặt từ Chương trình tự động (Program): Mã định danh Chủ sở hữu (Owner ID: ghi khác 0 để đăng ký chiếm quyền điều khiển, ghi 0 để nhả quyền) |
+| **`XSet_Ratio`** | `REAL` | `1` | Ẩn (Tag) | [Giá trị đặt từ Hệ thống ngoài] Giá trị đặt từ Hệ thống điều khiển ngoài (External): Hệ số tỷ lệ (Ratio, không thứ nguyên) khi vòng điều khiển chạy ở chế độ Cascade/Ratio |
+| **`XSet_SP`** | `REAL` | `0` | Ẩn (Tag) | [Giá trị đặt từ Hệ thống ngoài] Giá trị đặt từ Hệ thống điều khiển ngoài (External): Giá trị đặt chính (Setpoint - SP, tính theo đơn vị kỹ thuật PV EU) khi chạy chế độ Tự động (Auto) |
+| **`XSet_SPRoCLimInc`** | `REAL` | `0` | Ẩn (Tag) | [Giá trị đặt từ Hệ thống ngoài] Giá trị đặt từ Hệ thống điều khiển ngoài (External): Giới hạn tốc độ tăng tối đa của giá trị đặt SP (Positive Rate-of-Change Limit, đơn vị PVEU/giây) |
+| **`XSet_SPRoCLimDec`** | `REAL` | `0` | Ẩn (Tag) | [Giá trị đặt từ Hệ thống ngoài] Giá trị đặt từ Hệ thống điều khiển ngoài (External): Giới hạn tốc độ giảm tối đa của giá trị đặt SP (Negative Rate-of-Change Limit, đơn vị PVEU/giây) |
+| **`XSet_SPTarget`** | `REAL` | `0` | Ẩn (Tag) | [Giá trị đặt từ Hệ thống ngoài] Giá trị đặt từ Hệ thống điều khiển ngoài (External): Giá trị đích cuối cùng của quá trình tăng/giảm SP theo độ dốc (Setpoint Ramp Target, đơn vị PVEU) |
+| **`XSet_SPRampT`** | `REAL` | `0` | Ẩn (Tag) | [Giá trị đặt từ Hệ thống ngoài] Giá trị đặt từ Hệ thống điều khiển ngoài (External): Thời gian tăng/giảm giá trị đặt SP đến đích (Setpoint Ramp Time, hợp lệ từ 0.0 đến 28800.0 giây) |
+| **`XSet_CV`** | `REAL` | `0` | Ẩn (Tag) | [Giá trị đặt từ Hệ thống ngoài] Giá trị đặt từ Hệ thống điều khiển ngoài (External): Giá trị biến điều khiển đầu ra (Controlled Variable - CV, tính theo đơn vị kỹ thuật EU) |
+| **`PCmd_Casc`** | `BOOL` | `0` | Ẩn (Tag) | [Lệnh từ Chương trình PLC (Xung 1-shot)] Lệnh từ Chương trình tự động (Program) để Chuyển vòng điều khiển sang chế độ Tầng / Tỷ lệ (Cascade / Ratio Loop Mode) |
+| **`PCmd_Auto`** | `BOOL` | `0` | Ẩn (Tag) | [Lệnh từ Chương trình PLC (Xung 1-shot)] Lệnh từ Chương trình tự động (Program) để Chuyển vòng điều khiển sang chế độ Tự động (Automatic Loop Mode) |
+| **`PCmd_Man`** | `BOOL` | `0` | Ẩn (Tag) | [Lệnh từ Chương trình PLC (Xung 1-shot)] Lệnh từ Chương trình tự động (Program) để Chuyển vòng điều khiển sang chế độ Bằng tay (Manual Loop Mode) |
+| **`PCmd_NormLM`** | `BOOL` | `0` | Ẩn (Tag) | [Lệnh từ Chương trình PLC (Xung 1-shot)] Lệnh từ Chương trình tự động (Program) để Chuyển vòng điều khiển về chế độ Mặc định chuẩn (Normal Loop Mode theo Cfg_NormLM) |
+| **`PCmd_SPRampStart`** | `BOOL` | `0` | Ẩn (Tag) | [Lệnh từ Chương trình PLC (Xung 1-shot)] Lệnh từ Chương trình tự động (Program) để Bắt đầu chạy quy trình thay đổi giá trị đặt SP theo độ dốc (Start Setpoint Ramping) |
+| **`PCmd_SPRampStop`** | `BOOL` | `0` | Ẩn (Tag) | [Lệnh từ Chương trình PLC (Xung 1-shot)] Lệnh từ Chương trình tự động (Program) để Dừng quy trình thay đổi giá trị đặt SP theo độ dốc (Stop Setpoint Ramping) |
+| **`PCmd_Prog`** | `BOOL` | `0` | Ẩn (Tag) | [Lệnh từ Chương trình PLC (Xung 1-shot)] Lệnh từ Chương trình tự động (Program) để Chuyển nguồn lệnh sang chế độ Chương trình tự động (từ Operator sang Program) |
+| **`PCmd_Oper`** | `BOOL` | `0` | Ẩn (Tag) | [Lệnh từ Chương trình PLC (Xung 1-shot)] Lệnh từ Chương trình tự động (Program) để Chuyển nguồn lệnh sang chế độ Người vận hành (từ Program sang Operator) |
+| **`PCmd_Lock`** | `BOOL` | `0` | Ẩn (Tag) | [Lệnh từ Chương trình PLC (Xung 1-shot)] Lệnh từ Chương trình tự động (Program) để Khóa giữ nguồn lệnh hiện tại (không cho phép nguồn lệnh kia giành quyền) |
+| **`PCmd_Unlock`** | `BOOL` | `0` | Ẩn (Tag) | [Lệnh từ Chương trình PLC (Xung 1-shot)] Lệnh từ Chương trình tự động (Program) để Mở khóa nguồn lệnh hiện tại (cho phép chuyển đổi giữa Operator và Program) |
+| **`PCmd_Normal`** | `BOOL` | `0` | Ẩn (Tag) | [Lệnh từ Chương trình PLC (Xung 1-shot)] Lệnh từ Chương trình tự động (Program) để Đưa nguồn lệnh về chế độ Bình thường mặc định (Normal: Program hoặc Operator theo Cfg_ProgNormal) |
+| **`XCmd_Acq`** | `BOOL` | `0` | Ẩn (Tag) | [Lệnh từ Hệ thống ngoài (External)] Lệnh từ Hệ thống ngoài (External) để Chiếm quyền điều khiển (Acquire) về chế độ tương ứng |
+| **`XCmd_Rel`** | `BOOL` | `0` | Ẩn (Tag) | [Lệnh từ Hệ thống ngoài (External)] Lệnh từ Hệ thống ngoài (External) để Nhả quyền điều khiển (Release) để trả về chế độ Operator/Program |
+| **`PCmd_Reset`** | `BOOL` | `0` | Ẩn (Tag) | [Lệnh từ Chương trình PLC (Xung 1-shot)] Lệnh từ Chương trình tự động (Program) để Xóa (Reset) tất cả các chốt lỗi ngắt tải (Shed latches) và các cảnh báo đã hết điều kiện lỗi |
+| **`PCmd_HiHiDevAck`** | `BOOL` | `0` | Ẩn (Tag) | [Lệnh từ Chương trình PLC (Xung 1-shot)] Lệnh từ Chương trình tự động (Program) để Xác nhận (Acknowledge) cảnh báo độ lệch Rất Cao (High-High Deviation) (biến xung tự động xóa về 0 sau khi thực thi) |
+| **`PCmd_HiDevAck`** | `BOOL` | `0` | Ẩn (Tag) | [Lệnh từ Chương trình PLC (Xung 1-shot)] Lệnh từ Chương trình tự động (Program) để Xác nhận (Acknowledge) cảnh báo độ lệch Cao (High Deviation) (biến xung tự động xóa về 0 sau khi thực thi) |
+| **`PCmd_LoDevAck`** | `BOOL` | `0` | Ẩn (Tag) | [Lệnh từ Chương trình PLC (Xung 1-shot)] Lệnh từ Chương trình tự động (Program) để Xác nhận (Acknowledge) cảnh báo độ lệch Thấp (Low Deviation) (biến xung tự động xóa về 0 sau khi thực thi) |
+| **`PCmd_LoLoDevAck`** | `BOOL` | `0` | Ẩn (Tag) | [Lệnh từ Chương trình PLC (Xung 1-shot)] Lệnh từ Chương trình tự động (Program) để Xác nhận (Acknowledge) cảnh báo độ lệch Rất Thấp (Low-Low Deviation) (biến xung tự động xóa về 0 sau khi thực thi) |
+| **`PCmd_IntlkTripAck`** | `BOOL` | `0` | Ẩn (Tag) | [Lệnh từ Chương trình PLC (Xung 1-shot)] Lệnh từ Chương trình tự động (Program) để Xác nhận (Acknowledge) cảnh báo ngắt bảo vệ do vi phạm Khóa liên động (Interlock Trip) (biến xung tự động xóa về 0 sau khi thực thi) |
+| **`PCmd_FailAck`** | `BOOL` | `0` | Ẩn (Tag) | [Lệnh từ Chương trình PLC (Xung 1-shot)] Lệnh từ Chương trình tự động (Program) để Xác nhận (Acknowledge) cảnh báo lỗi tín hiệu / hỏng kênh đo (Signal Failure) (biến xung tự động xóa về 0 sau khi thực thi) |
+| **`PCmd_HiHiDevSuppress`** | `BOOL` | `0` | Ẩn (Tag) | [Lệnh từ Chương trình PLC (Xung 1-shot)] Lệnh từ Chương trình tự động (Program) để Ức chế (Suppress) cảnh báo độ lệch Rất Cao (High-High Deviation) từ chương trình (biến xung tự động xóa về 0) |
+| **`PCmd_HiDevSuppress`** | `BOOL` | `0` | Ẩn (Tag) | [Lệnh từ Chương trình PLC (Xung 1-shot)] Lệnh từ Chương trình tự động (Program) để Ức chế (Suppress) cảnh báo độ lệch Cao (High Deviation) từ chương trình (biến xung tự động xóa về 0) |
+| **`PCmd_LoDevSuppress`** | `BOOL` | `0` | Ẩn (Tag) | [Lệnh từ Chương trình PLC (Xung 1-shot)] Lệnh từ Chương trình tự động (Program) để Ức chế (Suppress) cảnh báo độ lệch Thấp (Low Deviation) từ chương trình (biến xung tự động xóa về 0) |
+| **`PCmd_LoLoDevSuppress`** | `BOOL` | `0` | Ẩn (Tag) | [Lệnh từ Chương trình PLC (Xung 1-shot)] Lệnh từ Chương trình tự động (Program) để Ức chế (Suppress) cảnh báo độ lệch Rất Thấp (Low-Low Deviation) từ chương trình (biến xung tự động xóa về 0) |
+| **`PCmd_IntlkTripSuppress`** | `BOOL` | `0` | Ẩn (Tag) | [Lệnh từ Chương trình PLC (Xung 1-shot)] Lệnh từ Chương trình tự động (Program) để Ức chế (Suppress) cảnh báo ngắt bảo vệ do vi phạm Khóa liên động (Interlock Trip) từ chương trình (biến xung tự động xóa về 0) |
+| **`PCmd_FailSuppress`** | `BOOL` | `0` | Ẩn (Tag) | [Lệnh từ Chương trình PLC (Xung 1-shot)] Lệnh từ Chương trình tự động (Program) để Ức chế (Suppress) cảnh báo lỗi tín hiệu / hỏng kênh đo (Signal Failure) từ chương trình (biến xung tự động xóa về 0) |
+| **`PCmd_HiHiDevUnsuppress`** | `BOOL` | `0` | Ẩn (Tag) | [Lệnh từ Chương trình PLC (Xung 1-shot)] Lệnh từ Chương trình tự động (Program) để Gỡ bỏ ức chế (Unsuppress) cảnh báo độ lệch Rất Cao (High-High Deviation) từ chương trình (biến xung tự động xóa về 0) |
+| **`PCmd_HiDevUnsuppress`** | `BOOL` | `0` | Ẩn (Tag) | [Lệnh từ Chương trình PLC (Xung 1-shot)] Lệnh từ Chương trình tự động (Program) để Gỡ bỏ ức chế (Unsuppress) cảnh báo độ lệch Cao (High Deviation) từ chương trình (biến xung tự động xóa về 0) |
+| **`PCmd_LoDevUnsuppress`** | `BOOL` | `0` | Ẩn (Tag) | [Lệnh từ Chương trình PLC (Xung 1-shot)] Lệnh từ Chương trình tự động (Program) để Gỡ bỏ ức chế (Unsuppress) cảnh báo độ lệch Thấp (Low Deviation) từ chương trình (biến xung tự động xóa về 0) |
+| **`PCmd_LoLoDevUnsuppress`** | `BOOL` | `0` | Ẩn (Tag) | [Lệnh từ Chương trình PLC (Xung 1-shot)] Lệnh từ Chương trình tự động (Program) để Gỡ bỏ ức chế (Unsuppress) cảnh báo độ lệch Rất Thấp (Low-Low Deviation) từ chương trình (biến xung tự động xóa về 0) |
+| **`PCmd_IntlkTripUnsuppress`** | `BOOL` | `0` | Ẩn (Tag) | [Lệnh từ Chương trình PLC (Xung 1-shot)] Lệnh từ Chương trình tự động (Program) để Gỡ bỏ ức chế (Unsuppress) cảnh báo ngắt bảo vệ do vi phạm Khóa liên động (Interlock Trip) từ chương trình (biến xung tự động xóa về 0) |
+| **`PCmd_FailUnsuppress`** | `BOOL` | `0` | Ẩn (Tag) | [Lệnh từ Chương trình PLC (Xung 1-shot)] Lệnh từ Chương trình tự động (Program) để Gỡ bỏ ức chế (Unsuppress) cảnh báo lỗi tín hiệu / hỏng kênh đo (Signal Failure) từ chương trình (biến xung tự động xóa về 0) |
+| **`PCmd_HiHiDevUnshelve`** | `BOOL` | `0` | Ẩn (Tag) | [Lệnh từ Chương trình PLC (Xung 1-shot)] Lệnh từ Chương trình tự động (Program) để Gỡ bỏ tạm hoãn (Unshelve) cảnh báo độ lệch Rất Cao (High-High Deviation) ngay lập tức (biến xung tự động xóa về 0) |
+| **`PCmd_HiDevUnshelve`** | `BOOL` | `0` | Ẩn (Tag) | [Lệnh từ Chương trình PLC (Xung 1-shot)] Lệnh từ Chương trình tự động (Program) để Gỡ bỏ tạm hoãn (Unshelve) cảnh báo độ lệch Cao (High Deviation) ngay lập tức (biến xung tự động xóa về 0) |
+| **`PCmd_LoDevUnshelve`** | `BOOL` | `0` | Ẩn (Tag) | [Lệnh từ Chương trình PLC (Xung 1-shot)] Lệnh từ Chương trình tự động (Program) để Gỡ bỏ tạm hoãn (Unshelve) cảnh báo độ lệch Thấp (Low Deviation) ngay lập tức (biến xung tự động xóa về 0) |
+| **`PCmd_LoLoDevUnshelve`** | `BOOL` | `0` | Ẩn (Tag) | [Lệnh từ Chương trình PLC (Xung 1-shot)] Lệnh từ Chương trình tự động (Program) để Gỡ bỏ tạm hoãn (Unshelve) cảnh báo độ lệch Rất Thấp (Low-Low Deviation) ngay lập tức (biến xung tự động xóa về 0) |
+| **`PCmd_IntlkTripUnshelve`** | `BOOL` | `0` | Ẩn (Tag) | [Lệnh từ Chương trình PLC (Xung 1-shot)] Lệnh từ Chương trình tự động (Program) để Gỡ bỏ tạm hoãn (Unshelve) cảnh báo ngắt bảo vệ do vi phạm Khóa liên động (Interlock Trip) ngay lập tức (biến xung tự động xóa về 0) |
+| **`PCmd_FailUnshelve`** | `BOOL` | `0` | Ẩn (Tag) | [Lệnh từ Chương trình PLC (Xung 1-shot)] Lệnh từ Chương trình tự động (Program) để Gỡ bỏ tạm hoãn (Unshelve) cảnh báo lỗi tín hiệu / hỏng kênh đo (Signal Failure) ngay lập tức (biến xung tự động xóa về 0) |
+| **`MCmd_Rel`** | `BOOL` | `0` | Ẩn (Tag) | [Lệnh từ tab Bảo trì (HMI Maintenance)] Lệnh từ Nhân viên bảo trì (Maintenance) để Nhả quyền điều khiển (Release) để trả về chế độ Operator/Program |
+| **`OCmd_Unlock`** | `BOOL` | `0` | Ẩn (Tag) | [Lệnh từ màn hình HMI Operator] Lệnh từ Người vận hành (Operator HMI) để Mở khóa nguồn lệnh hiện tại (cho phép chuyển đổi giữa Operator và Program) |
+| **`XCmd_Casc`** | `BOOL` | `0` | Ẩn (Tag) | [Lệnh từ Hệ thống ngoài (External)] Lệnh từ Hệ thống ngoài (External) để Chuyển vòng điều khiển sang chế độ Tầng / Tỷ lệ (Cascade / Ratio Loop Mode) |
+| **`XCmd_Auto`** | `BOOL` | `0` | Ẩn (Tag) | [Lệnh từ Hệ thống ngoài (External)] Lệnh từ Hệ thống ngoài (External) để Chuyển vòng điều khiển sang chế độ Tự động (Automatic Loop Mode) |
+| **`XCmd_Man`** | `BOOL` | `0` | Ẩn (Tag) | [Lệnh từ Hệ thống ngoài (External)] Lệnh từ Hệ thống ngoài (External) để Chuyển vòng điều khiển sang chế độ Bằng tay (Manual Loop Mode) |
+| **`XCmd_NormLM`** | `BOOL` | `0` | Ẩn (Tag) | [Lệnh từ Hệ thống ngoài (External)] Lệnh từ Hệ thống ngoài (External) để Chuyển vòng điều khiển về chế độ Mặc định chuẩn (Normal Loop Mode theo Cfg_NormLM) |
+| **`XCmd_SPRampStart`** | `BOOL` | `0` | Ẩn (Tag) | [Lệnh từ Hệ thống ngoài (External)] Lệnh từ Hệ thống ngoài (External) để Bắt đầu chạy quy trình thay đổi giá trị đặt SP theo độ dốc (Start Setpoint Ramping) |
+| **`XCmd_SPRampStop`** | `BOOL` | `0` | Ẩn (Tag) | [Lệnh từ Hệ thống ngoài (External)] Lệnh từ Hệ thống ngoài (External) để Dừng quy trình thay đổi giá trị đặt SP theo độ dốc (Stop Setpoint Ramping) |
+| **`XCmd_Reset`** | `BOOL` | `0` | Ẩn (Tag) | [Lệnh từ Hệ thống ngoài (External)] Lệnh từ Hệ thống ngoài (External) để Xóa (Reset) tất cả các chốt lỗi ngắt tải (Shed latches) và các cảnh báo đã hết điều kiện lỗi |
 
 ## 3. Bảng chi tiết 149 Biến Đầu Ra (`Output Parameters`) của `P_PIDE`
 | Tên biến (Output Parameter) | Kiểu dữ liệu | Mặc định | Hiển thị chân | Giải thích chức năng & Cách sử dụng trong Logic/HMI |
 | :--- | :--- | :--- | :--- | :--- |
-| **`EnableOut`** | `BOOL` | `0` | Ẩn (Tag) | [Chân nối tầng Rung] Ngõ ra nối tầng Rung (EnableOut): Giữ nguyên trạng thái của chân đầu vào EnableIn để nối tiếp sang khối lệnh phía sau. |
-| **`Out_CV`** | `REAL` | `0` | Hiện (Pin) | [Ngõ ra vật lý điều khiển thiết bị/I/O] CV to final control element (CV Raw Units) |
-| **`Val_PV`** | `REAL` | `0` | Hiện (Pin) | [Giá trị thực tế đầu ra (Logic/HMI)] Value of Loop PV (PVEU) |
-| **`Val_Ratio`** | `REAL` | `0` | Ẩn (Tag) | [Giá trị thực tế đầu ra (Logic/HMI)] Value of Loop Ratio (unitless) |
-| **`Val_SPSet`** | `REAL` | `0` | Ẩn (Tag) | [Giá trị thực tế đầu ra (Logic/HMI)] Value of selected SP (before clamping and ramping) (PVEU) |
-| **`Val_SP`** | `REAL` | `0` | Hiện (Pin) | [Giá trị thực tế đầu ra (Logic/HMI)] Value of SP being used (after ramping and clamping (PVEU) |
-| **`Val_SPTarget`** | `REAL` | `0` | Ẩn (Tag) | [Giá trị thực tế đầu ra (Logic/HMI)] Accepted Setting for Setpoint Ramp Target (endpoint, for ramp wizard) (PVEU) |
-| **`Val_SPRampT`** | `REAL` | `0` | Ẩn (Tag) | [Giá trị thực tế đầu ra (Logic/HMI)] Accepted Setting for Setpoint Ramp Time (to reach target, for ramp wizard) (sec). Valid = 0.0 to 28800.0 seconds. |
-| **`Val_SPRampRoC`** | `REAL` | `0` | Ẩn (Tag) | [Giá trị thực tế đầu ra (Logic/HMI)] Calculated Value of SP Rate of Change for Ramping (from Ramp Wizard) (PVEU/sec) |
-| **`Val_SPRoCInc`** | `REAL` | `0` | Ẩn (Tag) | [Giá trị thực tế đầu ra (Logic/HMI)] Current Value of Setpoint Positive Rate of Change Limit Increasing (PVEU/sec) |
-| **`Val_SPRoCDec`** | `REAL` | `0` | Ẩn (Tag) | [Giá trị thực tế đầu ra (Logic/HMI)] Current Value of Setpoint Negative Rate of Change Limit Decreasing (PVEU/sec) |
-| **`Val_E`** | `REAL` | `0` | Ẩn (Tag) | [Giá trị thực tế đầu ra (Logic/HMI)] Loop Error (PV-SP) (PVEU) |
-| **`Val_CVSet`** | `REAL` | `0` | Hiện (Pin) | [Giá trị thực tế đầu ra (Logic/HMI)] Value of selected CV (before clamping and ramping) (CVEU) |
-| **`Val_CVOut`** | `REAL` | `0` | Hiện (Pin) | [Giá trị thực tế đầu ra (Logic/HMI)] Value of CV Output (after ramping and clamping (CVEU) |
-| **`Val_PVPercent`** | `REAL` | `0` | Ẩn (Tag) | [Giá trị thực tế đầu ra (Logic/HMI)] Loop PV (percent of span) |
-| **`Val_SPPercent`** | `REAL` | `0` | Ẩn (Tag) | [Giá trị thực tế đầu ra (Logic/HMI)] Loop SP (percent of span) |
-| **`Val_EPercent`** | `REAL` | `0` | Ẩn (Tag) | [Giá trị thực tế đầu ra (Logic/HMI)] Loop Error (PV-SP) (percent of span) |
-| **`Val_CVPercent`** | `REAL` | `0` | Ẩn (Tag) | [Giá trị thực tế đầu ra (Logic/HMI)] Loop CV (percent of span) |
-| **`Val_ActExecT`** | `REAL` | `0` | Ẩn (Tag) | [Giá trị thực tế đầu ra (Logic/HMI)] Actual PID Algorithm Execution Time (Interval) (sec) |
-| **`Val_Init`** | `REAL` | `0` | Ẩn (Tag) | [Giá trị thực tế đầu ra (Logic/HMI)] Initialization Value for this loop's Cascade Primary (PVEU) |
-| **`Val_PVEUMin`** | `REAL` | `0` | Ẩn (Tag) | [Giá trị thực tế đầu ra (Logic/HMI)] Minimum of PV scaled range (PVEU) |
-| **`Val_PVEUMax`** | `REAL` | `100` | Ẩn (Tag) | [Giá trị thực tế đầu ra (Logic/HMI)] Maximum of PV scaled range (PVEU) |
-| **`Val_CVEUMin`** | `REAL` | `0` | Ẩn (Tag) | [Giá trị thực tế đầu ra (Logic/HMI)] Minimum of CV scaled range (CVEU) |
-| **`Val_CVEUMax`** | `REAL` | `100` | Ẩn (Tag) | [Giá trị thực tế đầu ra (Logic/HMI)] Maximum of CV scaled range (CVEU) |
-| **`SrcQ_IO`** | `DINT` | `0` | Ẩn (Tag) | [Mã nguồn gốc & chất lượng tín hiệu] Mã nguồn gốc và chất lượng của kênh I/O sơ cấp (kiểu liệt kê enum) |
-| **`SrcQ`** | `DINT` | `0` | Ẩn (Tag) | [Mã nguồn gốc & chất lượng tín hiệu] Final source and quality. GOOD 0 = I/O live and confirmed good quality 1 = I/O live and assumed good quality 2 = No feedback configured, assumed good quality TEST 8 = Device simulated 9 = Device loopback simulation 10 = Manually entered value UNCERTAIN 16 = Live input, off-specification 17 = Value substituted at device/bus 18 = Value substituted by maintenance (Has and not Use) 19 = Shed, using last good value 20 = Shed, using replacement value BAD 32 = Signal failure (out-of-range, NaN, invalid combination) 33 = I/O channel fault 34 = I/O module fault 35 = Bad I/O configuration (for example, scaling parameters) |
-| **`Val_Sts`** | `DINT` | `0` | Ẩn (Tag) | [Giá trị thực tế đầu ra (Logic/HMI)] Loop status enumeration: 0 = Unknown (POoS @ Intlk CV) 1 = Manual Loop Mode 2 = Auto Loop Mode 3 = Cascade Loop Mode (no ratio) 4 = Cascade Loop Mode with Ratio |
-| **`Val_Fault`** | `DINT` | `0` | Ẩn (Tag) | [Giá trị thực tế đầu ra (Logic/HMI)] Loop fault status: 0 = No fault 1 = PV uncertain 22 = Low deviation 23 = High deviation 27 = Low-low deviation 28 = High-high deviation 29 = Shed on interlock trip 30 = Shed on SP failure 31 = Shed on PV failure 32 = Shed on CV failure 34 = Configuration error |
-| **`Val_State`** | `DINT` | `0` | Ẩn (Tag) | [Giá trị thực tế đầu ra (Logic/HMI)] Loop algorithm state: 0 = Manual 1 = Controlled, within deadband 2 = Controlled, not within deadband 3 = SP is ramping 4 = CV is ramping 5 = Ratio is clamped 6 = SP is clamped 7 = CV is clamped 8 = Windup low 9 = Windup high 10 = SP held (shed) 11 = SP at Interlock SP (shed) 12 = CV held (shed) 13 = CV at Interlock CV (shed) 14 = CV at Hand Feedback value 15 = CV initializing |
-| **`Val_NotifyAll`** | `DINT` | `0` | Ẩn (Tag) | [Giá trị thực tế đầu ra (Logic/HMI)] Highest Alarm prio and ack status this object + PV, CV, CascSP (enum) |
-| **`Val_UnackAlmC`** | `DINT` | `0` | Ẩn (Tag) | [Giá trị thực tế đầu ra (Logic/HMI)] Tổng số lượng cảnh báo hiện đang chưa được xác nhận (Unacknowledged Alarms) |
-| **`Val_Owner`** | `DINT` | `0` | Ẩn (Tag) | [Giá trị thực tế đầu ra (Logic/HMI)] Current Object Owner ID (0=not owned) |
-| **`Sts_InstrFaults1`** | `DINT` | `2#0000_0000_0000_0000_0000_0000_0000_0000` | Ẩn (Tag) | [Cờ báo trạng thái logic (Status)] PIDE Block Status1 Instruction Fault bits (See PIDE Instruction Help) |
-| **`Sts_InstrFaults2`** | `DINT` | `2#0000_0000_0000_0000_0000_0000_0000_0000` | Ẩn (Tag) | [Cờ báo trạng thái logic (Status)] PIDE Block Status2 Instruction Fault bits (See PIDE Instruction Help) |
-| **`Sts_Casc`** | `BOOL` | `0` | Hiện (Pin) | [Cờ báo trạng thái logic (Status)] 1=Loop Mode is Cascade/Ratio |
-| **`Sts_Auto`** | `BOOL` | `0` | Hiện (Pin) | [Cờ báo trạng thái logic (Status)] 1=Loop Mode is Auto |
-| **`Sts_Man`** | `BOOL` | `0` | Hiện (Pin) | [Cờ báo trạng thái logic (Status)] 1=Loop Mode is Manual |
-| **`Sts_NormLM`** | `BOOL` | `0` | Ẩn (Tag) | [Cờ báo trạng thái logic (Status)] 1=Loop is in Normal Loop Mode (see Cfg_NormLM) |
-| **`Sts_Initializing`** | `BOOL` | `0` | Ẩn (Tag) | [Cờ báo trạng thái logic (Status)] 1=CV is initializing because of Request from this loop's Secondary |
-| **`Sts_InitReq`** | `BOOL` | `0` | Ẩn (Tag) | [Cờ báo trạng thái logic (Status)] 1=CV Initialize Request to this loop's Primary |
-| **`Sts_WindupHi`** | `BOOL` | `0` | Ẩn (Tag) | [Cờ báo trạng thái logic (Status)] 1=This loop winding up High, to Inp_WindupHi of this loop's Primary |
-| **`Sts_WindupLo`** | `BOOL` | `0` | Ẩn (Tag) | [Cờ báo trạng thái logic (Status)] 1=This loop winding up Low, to Inp_WindupLo of this loop's Primary |
-| **`Sts_ZCDBOn`** | `BOOL` | `0` | Ẩn (Tag) | [Cờ báo trạng thái logic (Status)] Deadband indicator: 1=PV is within ZC deadband and CV will not change |
-| **`Sts_RatioClamped`** | `BOOL` | `0` | Ẩn (Tag) | [Cờ báo trạng thái logic (Status)] 1=Selected Ratio (PSet/OSet/XSet_Ratio or Inp_OvrdRatio) has been clamped |
-| **`Sts_SPBad`** | `BOOL` | `0` | Ẩn (Tag) | [Cờ báo trạng thái logic (Status)] 1=SP Value is Bad (quality) or invalid or Casc SP comms fault |
-| **`Sts_IntlkSP`** | `BOOL` | `0` | Ẩn (Tag) | [Cờ báo trạng thái logic (Status)] 1=SP Value is being set by shed to Interlock SP |
-| **`Sts_SPHeld`** | `BOOL` | `0` | Ẩn (Tag) | [Cờ báo trạng thái logic (Status)] 1=SP Value is being set by shed to hold last good SP |
-| **`Sts_SPShedPV`** | `BOOL` | `0` | Ẩn (Tag) | [Cờ báo trạng thái logic (Status)] 1=SP Value was set by shed to current PV |
-| **`Sts_SPShed`** | `BOOL` | `0` | Ẩn (Tag) | [Cờ báo trạng thái logic (Status)] 1=SP from Shed, 0=SP from Prog, Oper, Ovrd (A), Casc SP Input (C) or PV Track (M) |
-| **`Sts_SPTrackPV`** | `BOOL` | `0` | Ẩn (Tag) | [Cờ báo trạng thái logic (Status)] 1=SP Value is being set by PV Tracking (in Manual Mode) |
-| **`Sts_SPClamped`** | `BOOL` | `0` | Ẩn (Tag) | [Cờ báo trạng thái logic (Status)] 1=Selected SP is being clamped (for faceplate animation) |
-| **`Sts_SPRamping`** | `BOOL` | `0` | Ẩn (Tag) | [Cờ báo trạng thái logic (Status)] 1=SP is ramping toward Val_SPSet, 0=ramp complete |
-| **`Sts_SkipSPRoCLim`** | `BOOL` | `0` | Ẩn (Tag) | [Cờ báo trạng thái logic (Status)] 1=SP rate limiting is being skipped (for faceplate animation) |
-| **`Sts_PVBad`** | `BOOL` | `0` | Ẩn (Tag) | [Cờ báo trạng thái logic (Status)] 1=PV Value, comms, quality or EU Limitis Bad |
-| **`Sts_PVUncertain`** | `BOOL` | `0` | Ẩn (Tag) | [Cờ báo trạng thái logic (Status)] 1 = Giá trị PV có chất lượng không chắc chắn (Uncertain Quality) |
-| **`Sts_FFBad`** | `BOOL` | `0` | Ẩn (Tag) | [Cờ báo trạng thái logic (Status)] 1=Feedforward Term Value is invalid |
-| **`Sts_FFPrevBad`** | `BOOL` | `0` | Ẩn (Tag) | [Cờ báo trạng thái logic (Status)] 1=Inp_FFPrev is <-100 CV%, >100 CV%, or not a number (NaN) |
-| **`Sts_CVBad`** | `BOOL` | `0` | Ẩn (Tag) | [Cờ báo trạng thái logic (Status)] 1=CV Value is Bad (quality) or invalid or CV comms fault |
-| **`Sts_CVPrevBad`** | `BOOL` | `0` | Ẩn (Tag) | [Cờ báo trạng thái logic (Status)] 1=Inp_CVPrev is <0.0 CV%, >100.0 CV%, or not a number (NaN) |
-| **`Sts_HandFdbkBad`** | `BOOL` | `0` | Ẩn (Tag) | [Cờ báo trạng thái logic (Status)] 1=Hand FB (Tieback) Value is Bad (quality) or invalid or comms fault |
-| **`Sts_IntlkCV`** | `BOOL` | `0` | Ẩn (Tag) | [Cờ báo trạng thái logic (Status)] 1=CV ivalue s being set by shed to Interlock CV |
-| **`Sts_CVHeld`** | `BOOL` | `0` | Ẩn (Tag) | [Cờ báo trạng thái logic (Status)] 1=CV Value is being set by shed to hold last good CV |
-| **`Sts_CVShed`** | `BOOL` | `0` | Ẩn (Tag) | [Cờ báo trạng thái logic (Status)] 1=CV from Shed, 0=CV from Prog, Oper, Ovrd (Man), or PID (Auto, Casc) |
-| **`Sts_CVClamped`** | `BOOL` | `0` | Ẩn (Tag) | [Cờ báo trạng thái logic (Status)] 1=Selected CV is being clamped (for faceplate animation) |
-| **`Sts_CVRamping`** | `BOOL` | `0` | Ẩn (Tag) | [Cờ báo trạng thái logic (Status)] 1=CV is ramping toward Val_CVSet, 0=ramp complete |
-| **`Sts_Active`** | `BOOL` | `0` | Ẩn (Tag) | [Cờ báo trạng thái logic (Status)] 1=CV is greater than Cfg_MaxInactiveCV, show graphic symbol as "active" |
-| **`Sts_Available`** | `BOOL` | `0` | Ẩn (Tag) | [Cờ báo trạng thái logic (Status)] 1=Analog Output available for control by automation (Prog) |
-| **`Sts_Bypass`** | `BOOL` | `0` | Ẩn (Tag) | [Cờ báo trạng thái logic (Status)] 1=Bypassable Interlocks are Bypassed |
-| **`Sts_BypActive`** | `BOOL` | `0` | Ẩn (Tag) | [Cờ báo trạng thái logic (Status)] 1=Bypassing Active (Bypassed or Maintenance) |
-| **`Sts_NotRdy`** | `BOOL` | `0` | Ẩn (Tag) | [Cờ báo trạng thái logic (Status)] 1=Device Not Ready, see detail bits for reason |
-| **`Nrdy_CfgErr`** | `BOOL` | `0` | Ẩn (Tag) | [Cờ báo nguyên nhân thiết bị chưa sẵn sàng] 1=Device Not Ready: Lỗi cài đặt thông số cấu hình (Configuration Error) |
-| **`Nrdy_Init`** | `BOOL` | `0` | Ẩn (Tag) | [Cờ báo nguyên nhân thiết bị chưa sẵn sàng] 1=Device Not Ready: Initialized to Manual Mode |
-| **`Nrdy_Intlk`** | `BOOL` | `0` | Ẩn (Tag) | [Cờ báo nguyên nhân thiết bị chưa sẵn sàng] 1=Device Not Ready: Điều kiện Khóa liên động không thỏa mãn (Interlock Not OK) |
-| **`Nrdy_IOFault`** | `BOOL` | `0` | Ẩn (Tag) | [Cờ báo nguyên nhân thiết bị chưa sẵn sàng] 1=Device Not Ready: Lỗi truyền thông I/O (yêu cầu nhấn Reset) |
-| **`Nrdy_OoS`** | `BOOL` | `0` | Ẩn (Tag) | [Cờ báo nguyên nhân thiết bị chưa sẵn sàng] 1=Device Not Ready: Out of Service |
-| **`Sts_MaintByp`** | `BOOL` | `0` | Ẩn (Tag) | [Cờ báo trạng thái logic (Status)] 1=Device has a Maintenance Bypass function active |
-| **`Sts_AlmInh`** | `BOOL` | `0` | Ẩn (Tag) | [Cờ báo trạng thái logic (Status)] 1=An Alarm is Disabled or Shelved, display icon |
-| **`Sts_Err`** | `BOOL` | `0` | Hiện (Pin) | [Cờ báo trạng thái logic (Status)] 1=Error in Config: see detail Err bits for reason |
-| **`Err_Timer`** | `BOOL` | `0` | Ẩn (Tag) | [Cờ báo lỗi cài đặt thông số Cfg_*] 1=Error in Config: Status On-Delay or Off-Delay Time Invalid |
-| **`Err_Alarm`** | `BOOL` | `0` | Ẩn (Tag) | [Cờ báo lỗi cài đặt thông số Cfg_*] 1=Error in Config: Alarm Severity Invalid |
-| **`Err_RatioLim`** | `BOOL` | `0` | Ẩn (Tag) | [Cờ báo lỗi cài đặt thông số Cfg_*] 1=Error in Config: Ratio Clamping Limits Invalid |
-| **`Err_SPLim`** | `BOOL` | `0` | Ẩn (Tag) | [Cờ báo lỗi cài đặt thông số Cfg_*] 1=Error in Config: Setpoint Clamping Limits Invalid |
-| **`Err_CVLim`** | `BOOL` | `0` | Ẩn (Tag) | [Cờ báo lỗi cài đặt thông số Cfg_*] 1=Error in Config: CV Clamping Limits Invalid |
-| **`Err_PVEU`** | `BOOL` | `0` | Ẩn (Tag) | [Cờ báo lỗi cài đặt thông số Cfg_*] 1=Error in Config: PV EU Max/Min Invalid |
-| **`Err_CVEU`** | `BOOL` | `0` | Ẩn (Tag) | [Cờ báo lỗi cài đặt thông số Cfg_*] 1=Error in Config: CV EU Max/Min Invalid |
-| **`Err_CVRaw`** | `BOOL` | `0` | Ẩn (Tag) | [Cờ báo lỗi cài đặt thông số Cfg_*] 1=Error in Config: CV Raw Max/Min Invalid |
-| **`Err_ZCDB`** | `BOOL` | `0` | Ẩn (Tag) | [Cờ báo lỗi cài đặt thông số Cfg_*] 1=Error in Config: Loop Zero Crossing Deadband Invalid |
-| **`Sts_Hand`** | `BOOL` | `0` | Hiện (Pin) | [Cờ báo trạng thái logic (Status)] 1=Hand đang được chọn làm Nguồn lệnh điều khiển hiện hành (ưu tiên cao hơn OoS, Maint, Ovrd, Ext, Prog, Oper) |
-| **`Sts_OoS`** | `BOOL` | `0` | Hiện (Pin) | [Cờ báo trạng thái logic (Status)] 1=Out of Service đang được chọn làm Nguồn lệnh điều khiển hiện hành (ưu tiên cao hơn Maint, Ovrd, Ext, Prog, Oper) |
-| **`Sts_Maint`** | `BOOL` | `0` | Hiện (Pin) | [Cờ báo trạng thái logic (Status)] 1=Maintenance đang được chọn làm Nguồn lệnh điều khiển hiện hành (ưu tiên cao hơn Ovrd, Ext, Prog, Oper) |
-| **`Sts_Ovrd`** | `BOOL` | `0` | Hiện (Pin) | [Cờ báo trạng thái logic (Status)] 1=Override đang được chọn làm Nguồn lệnh điều khiển hiện hành (ưu tiên cao hơn Ext, Prog, Oper) |
-| **`Sts_Ext`** | `BOOL` | `0` | Hiện (Pin) | [Cờ báo trạng thái logic (Status)] 1=External đang được chọn làm Nguồn lệnh điều khiển hiện hành (ưu tiên cao hơn Prog, Oper) |
-| **`Sts_Prog`** | `BOOL` | `0` | Hiện (Pin) | [Cờ báo trạng thái logic (Status)] 1=Program đang được chọn làm Nguồn lệnh điều khiển hiện hành |
-| **`Sts_ProgLocked`** | `BOOL` | `0` | Ẩn (Tag) | [Cờ báo trạng thái logic (Status)] 1=Program đang được chọn làm Nguồn lệnh điều khiển hiện hành and Locked |
-| **`Sts_Oper`** | `BOOL` | `0` | Hiện (Pin) | [Cờ báo trạng thái logic (Status)] 1=Operator đang được chọn làm Nguồn lệnh điều khiển hiện hành |
-| **`Sts_OperLocked`** | `BOOL` | `0` | Ẩn (Tag) | [Cờ báo trạng thái logic (Status)] 1=Operator đang được chọn làm Nguồn lệnh điều khiển hiện hành and Locked |
-| **`Sts_Normal`** | `BOOL` | `0` | Ẩn (Tag) | [Cờ báo trạng thái logic (Status)] 1=Selection equals the Normal (Prog or Oper) |
-| **`Sts_ExtReqInh`** | `BOOL` | `0` | Ẩn (Tag) | [Cờ báo trạng thái logic (Status)] 1=External request inhibited, cannot Get to External from current state |
-| **`Sts_ProgReqInh`** | `BOOL` | `0` | Ẩn (Tag) | [Cờ báo trạng thái logic (Status)] 1=Program request inhibited, cannot Get to Program from current state |
-| **`Sts_MAcqRcvd`** | `BOOL` | `0` | Ẩn (Tag) | [Cờ báo trạng thái logic (Status)] 1=Maintenance Acquire command received this scan |
-| **`Sts_RdyReset`** | `BOOL` | `0` | Ẩn (Tag) | [Cờ báo trạng thái logic (Status)] 1 = Có cảnh báo chốt (Latched) hoặc lỗi ngắt tải (Shed) đã hết điều kiện lỗi và sẵn sàng nhận lệnh Reset |
-| **`Sts_RdyAck`** | `BOOL` | `0` | Ẩn (Tag) | [Cờ báo trạng thái logic (Status)] 1 = Có cảnh báo mới đang chờ được nhấn Xác nhận (Acknowledge) |
-| **`Sts_HiHiDevCmp`** | `BOOL` | `0` | Ẩn (Tag) | [Cờ báo trạng thái logic (Status)] High-High Deviation kết quả so sánh ngưỡng trực tiếp 1=High-High |
-| **`Sts_HiHiDevGate`** | `BOOL` | `0` | Ẩn (Tag) | [Cờ báo trạng thái logic (Status)] High-High Deviation trạng thái hoàn tất trễ cổng Gate (1 = Đã mở cổng) |
-| **`Sts_HiHiDev`** | `BOOL` | `1` | Ẩn (Tag) | [Cờ báo trạng thái logic (Status)] 1=PV Deviation đang vượt trên ngưỡng Rất Cao (High-High) |
-| **`Alm_HiHiDev`** | `BOOL` | `0` | Ẩn (Tag) | [Cờ báo động (1 = Đang báo động)] 1=Loop High-High Deviation Alarm |
-| **`Ack_HiHiDev`** | `BOOL` | `1` | Ẩn (Tag) | [Cờ xác nhận báo động (1 = Đã Ack)] 1=High-High Deviation Alarm đã được Xác nhận (Acknowledged) |
-| **`Sts_HiHiDevDisabled`** | `BOOL` | `0` | Ẩn (Tag) | [Cờ báo trạng thái logic (Status)] 1=High-High Deviation Alarm is Disabled (by Maint) |
-| **`Sts_HiHiDevShelved`** | `BOOL` | `0` | Ẩn (Tag) | [Cờ báo trạng thái logic (Status)] 1=High-High Deviation Alarm is Shelved (by Oper) |
-| **`Sts_HiHiDevSuppressed`** | `BOOL` | `0` | Ẩn (Tag) | [Cờ báo trạng thái logic (Status)] 1=High-High Deviation Alarm is Suppressed (by logic) |
-| **`Sts_HiDevCmp`** | `BOOL` | `0` | Ẩn (Tag) | [Cờ báo trạng thái logic (Status)] High Deviation kết quả so sánh ngưỡng trực tiếp 1=High-High |
-| **`Sts_HiDevGate`** | `BOOL` | `0` | Ẩn (Tag) | [Cờ báo trạng thái logic (Status)] High Deviation trạng thái hoàn tất trễ cổng Gate (1 = Đã mở cổng) |
-| **`Sts_HiDev`** | `BOOL` | `1` | Ẩn (Tag) | [Cờ báo trạng thái logic (Status)] 1=PV Deviation đang vượt trên ngưỡng Cao (High) |
-| **`Alm_HiDev`** | `BOOL` | `0` | Ẩn (Tag) | [Cờ báo động (1 = Đang báo động)] 1=Loop High Deviation Alarm |
-| **`Ack_HiDev`** | `BOOL` | `1` | Ẩn (Tag) | [Cờ xác nhận báo động (1 = Đã Ack)] 1=High Deviation Alarm đã được Xác nhận (Acknowledged) |
-| **`Sts_HiDevDisabled`** | `BOOL` | `0` | Ẩn (Tag) | [Cờ báo trạng thái logic (Status)] 1=High Deviation Alarm is Disabled (by Maint) |
-| **`Sts_HiDevShelved`** | `BOOL` | `0` | Ẩn (Tag) | [Cờ báo trạng thái logic (Status)] 1=High Deviation Alarm is Shelved (by Oper) |
-| **`Sts_HiDevSuppressed`** | `BOOL` | `0` | Ẩn (Tag) | [Cờ báo trạng thái logic (Status)] 1=High Deviation Alarm is Suppressed (by logic) |
-| **`Sts_LoDevCmp`** | `BOOL` | `0` | Ẩn (Tag) | [Cờ báo trạng thái logic (Status)] Low Deviation kết quả so sánh ngưỡng trực tiếp 1=High-High |
-| **`Sts_LoDevGate`** | `BOOL` | `0` | Ẩn (Tag) | [Cờ báo trạng thái logic (Status)] Low Deviation trạng thái hoàn tất trễ cổng Gate (1 = Đã mở cổng) |
-| **`Sts_LoDev`** | `BOOL` | `1` | Ẩn (Tag) | [Cờ báo trạng thái logic (Status)] 1=PV Deviation đang tụt dưới ngưỡng Thấp (Low) |
-| **`Alm_LoDev`** | `BOOL` | `0` | Ẩn (Tag) | [Cờ báo động (1 = Đang báo động)] 1=Loop Low Deviation Alarm |
-| **`Ack_LoDev`** | `BOOL` | `1` | Ẩn (Tag) | [Cờ xác nhận báo động (1 = Đã Ack)] 1=Loiw Deviation Alarm đã được Xác nhận (Acknowledged) |
-| **`Sts_LoDevDisabled`** | `BOOL` | `0` | Ẩn (Tag) | [Cờ báo trạng thái logic (Status)] 1=Low Deviation Alarm is Disabled (by Maint) |
-| **`Sts_LoDevShelved`** | `BOOL` | `0` | Ẩn (Tag) | [Cờ báo trạng thái logic (Status)] 1=Low Deviation Alarm is Shelved (by Oper) |
-| **`Sts_LoDevSuppressed`** | `BOOL` | `0` | Ẩn (Tag) | [Cờ báo trạng thái logic (Status)] 1=Low Deviation Alarm is Suppressed (by logic) |
-| **`Sts_LoLoDevCmp`** | `BOOL` | `0` | Ẩn (Tag) | [Cờ báo trạng thái logic (Status)] Low-Low Deviation kết quả so sánh ngưỡng trực tiếp 1=High-High |
-| **`Sts_LoLoDevGate`** | `BOOL` | `0` | Ẩn (Tag) | [Cờ báo trạng thái logic (Status)] Low-Low Deviation trạng thái hoàn tất trễ cổng Gate (1 = Đã mở cổng) |
-| **`Sts_LoLoDev`** | `BOOL` | `1` | Ẩn (Tag) | [Cờ báo trạng thái logic (Status)] 1=PV Deviation đang tụt dưới ngưỡng Rất Thấp (Low-Low) |
-| **`Alm_LoLoDev`** | `BOOL` | `0` | Ẩn (Tag) | [Cờ báo động (1 = Đang báo động)] 1=Loop Low-Low Deviation Alarm |
-| **`Ack_LoLoDev`** | `BOOL` | `1` | Ẩn (Tag) | [Cờ xác nhận báo động (1 = Đã Ack)] 1=Low-Loiw Deviation Alarm đã được Xác nhận (Acknowledged) |
-| **`Sts_LoLoDevDisabled`** | `BOOL` | `0` | Ẩn (Tag) | [Cờ báo trạng thái logic (Status)] 1=Low-Low Deviation Alarm is Disabled (by Maint) |
-| **`Sts_LoLoDevShelved`** | `BOOL` | `0` | Ẩn (Tag) | [Cờ báo trạng thái logic (Status)] 1=Low-Low Deviation Alarm is Shelved (by Oper) |
-| **`Sts_LoLoDevSuppressed`** | `BOOL` | `0` | Ẩn (Tag) | [Cờ báo trạng thái logic (Status)] 1=Low-Low Deviation Alarm is Suppressed (by logic) |
-| **`Sts_IntlkTrip`** | `BOOL` | `1` | Ẩn (Tag) | [Cờ báo trạng thái logic (Status)] 1=Interlock NOT OK caused loop output to hold or change |
-| **`Alm_IntlkTrip`** | `BOOL` | `0` | Ẩn (Tag) | [Cờ báo động (1 = Đang báo động)] 1=Interlock Trip Alarm |
-| **`Ack_IntlkTrip`** | `BOOL` | `1` | Ẩn (Tag) | [Cờ xác nhận báo động (1 = Đã Ack)] 1=Interlock Trip Alarm đã được Xác nhận (Acknowledged) |
-| **`Sts_IntlkTripDisabled`** | `BOOL` | `0` | Ẩn (Tag) | [Cờ báo trạng thái logic (Status)] 1=Interlock Trip Alarm is Disabled (by Maint) |
-| **`Sts_IntlkTripShelved`** | `BOOL` | `0` | Ẩn (Tag) | [Cờ báo trạng thái logic (Status)] 1=Interlock Trip Alarm is Shelved (by Oper) |
-| **`Sts_IntlkTripSuppressed`** | `BOOL` | `0` | Ẩn (Tag) | [Cờ báo trạng thái logic (Status)] 1=Interlock Trip Alarm is Suppressed (by logic) |
-| **`Sts_Fail`** | `BOOL` | `1` | Ẩn (Tag) | [Cờ báo trạng thái logic (Status)] 1=Loop Failure: PV Bad, SP Bad or CV Comm Failure or Bad |
-| **`Alm_Fail`** | `BOOL` | `0` | Ẩn (Tag) | [Cờ báo động (1 = Đang báo động)] 1=Loop Failure Alarm: PV Bad, SP Bad or CV Comm Failure or Bad |
-| **`Ack_Fail`** | `BOOL` | `1` | Ẩn (Tag) | [Cờ xác nhận báo động (1 = Đã Ack)] 1=Loop Failure Alarm đã được Xác nhận (Acknowledged) |
-| **`Sts_FailDisabled`** | `BOOL` | `0` | Ẩn (Tag) | [Cờ báo trạng thái logic (Status)] 1=Loop Failure Alarm is Disabled (by Maint) |
-| **`Sts_FailShelved`** | `BOOL` | `0` | Ẩn (Tag) | [Cờ báo trạng thái logic (Status)] 1=Loop Failure Alarm is Shelved (by Oper) |
-| **`Sts_FailSuppressed`** | `BOOL` | `0` | Ẩn (Tag) | [Cờ báo trạng thái logic (Status)] 1=Loop Failure Alarm is Suppressed (by logic) |
-| **`MRdy_Rel`** | `BOOL` | `0` | Ẩn (Tag) | [Cờ cho phép sáng nút nhấn trên HMI] 1 = Sẵn sàng nhận lệnh MCmd_Rel (cho phép sáng nút nhấn tương ứng trên HMI Faceplate) |
-| **`ORdy_Unlock`** | `BOOL` | `0` | Ẩn (Tag) | [Cờ cho phép sáng nút nhấn trên HMI] 1 = Sẵn sàng nhận lệnh OCmd_Unlock (cho phép sáng nút nhấn tương ứng trên HMI Faceplate) |
-| **`P_PIDE`** | `BOOL` | `0` | Ẩn (Tag) | Tham số định danh trùng tên AOI dùng cho công cụ tự động dò tìm thẻ (Auto-discovery) của HMI |
+| **`EnableOut`** | `BOOL` | `0` | Ẩn (Tag) | Ngõ ra nối tầng Rung (Enable Out): Luôn phản ánh nguyên vẹn trạng thái của chân đầu vào EnableIn để nối tiếp sang các khối lệnh phía sau trên cùng nhánh Rung |
+| **`Out_CV`** | `REAL` | `0` | Hiện (Pin) | [Ngõ ra vật lý điều khiển thiết bị/I/O] Giá trị ngõ ra điều khiển tương tự (Controlled Variable - CV) gửi tới cơ cấu chấp hành / thẻ Analog Output (đơn vị Raw hoặc EU) |
+| **`Val_PV`** | `REAL` | `0` | Hiện (Pin) | [Giá trị thực tế đầu ra (Logic/HMI)] Giá trị biến sơ cấp kỹ thuật số (HART Primary Variable - PV, tính theo đơn vị PVEU) |
+| **`Val_Ratio`** | `REAL` | `0` | Ẩn (Tag) | [Giá trị thực tế đầu ra (Logic/HMI)] Giá trị hệ số tỷ lệ (Loop Ratio, không thứ nguyên) đang áp dụng thực tế |
+| **`Val_SPSet`** | `REAL` | `0` | Ẩn (Tag) | [Giá trị thực tế đầu ra (Logic/HMI)] Giá trị đặt Setpoint (SP) được chọn từ nguồn lệnh (trước khi Ramp và kẹp giới hạn, đơn vị PVEU) |
+| **`Val_SP`** | `REAL` | `0` | Hiện (Pin) | [Giá trị thực tế đầu ra (Logic/HMI)] Giá trị đặt Setpoint (SP) đang áp dụng thực tế cho thuật toán PID (sau khi đã Ramp và kẹp giới hạn, đơn vị PVEU) |
+| **`Val_SPTarget`** | `REAL` | `0` | Ẩn (Tag) | [Giá trị thực tế đầu ra (Logic/HMI)] Giá trị đích cuối cùng của quá trình tăng/giảm SP theo độ dốc (đơn vị PVEU) |
+| **`Val_SPRampT`** | `REAL` | `0` | Ẩn (Tag) | [Giá trị thực tế đầu ra (Logic/HMI)] Thời gian tăng/giảm SP đến đích đang được chấp nhận (từ 0.0 đến 28800.0 giây) |
+| **`Val_SPRampRoC`** | `REAL` | `0` | Ẩn (Tag) | [Giá trị thực tế đầu ra (Logic/HMI)] Tốc độ thay đổi SP tự động tính toán được từ trình thuật sĩ Setpoint Ramp Wizard (đơn vị PVEU/giây) |
+| **`Val_SPRoCInc`** | `REAL` | `0` | Ẩn (Tag) | [Giá trị thực tế đầu ra (Logic/HMI)] Giới hạn tốc độ tăng SP tối đa hiện hành (đơn vị PVEU/giây) |
+| **`Val_SPRoCDec`** | `REAL` | `0` | Ẩn (Tag) | [Giá trị thực tế đầu ra (Logic/HMI)] Giới hạn tốc độ giảm SP tối đa hiện hành (đơn vị PVEU/giây) |
+| **`Val_E`** | `REAL` | `0` | Ẩn (Tag) | [Giá trị thực tế đầu ra (Logic/HMI)] Sai lệch điều khiển hiện tại của vòng PID (Loop Error E = PV - SP hoặc SP - PV, đơn vị PVEU) |
+| **`Val_CVSet`** | `REAL` | `0` | Hiện (Pin) | [Giá trị thực tế đầu ra (Logic/HMI)] Giá trị đặt CV đang được chọn (trước khi qua bộ giới hạn tốc độ thay đổi RoC, đơn vị EU) |
+| **`Val_CVOut`** | `REAL` | `0` | Hiện (Pin) | [Giá trị thực tế đầu ra (Logic/HMI)] Giá trị biến điều khiển CV xuất ra thực tế (sau khi qua bộ giới hạn tốc độ thay đổi RoC, đơn vị EU) |
+| **`Val_PVPercent`** | `REAL` | `0` | Ẩn (Tag) | [Giá trị thực tế đầu ra (Logic/HMI)] Giá trị biến quá trình (PV) tính theo phần trăm toàn dải đo PV (0..100% Span) |
+| **`Val_SPPercent`** | `REAL` | `0` | Ẩn (Tag) | [Giá trị thực tế đầu ra (Logic/HMI)] Giá trị đặt Setpoint (SP) tính theo phần trăm toàn dải đo PV (0..100% Span) |
+| **`Val_EPercent`** | `REAL` | `0` | Ẩn (Tag) | [Giá trị thực tế đầu ra (Logic/HMI)] Sai lệch điều khiển hiện tại của vòng PID tính theo phần trăm toàn dải đo (% Span) |
+| **`Val_CVPercent`** | `REAL` | `0` | Ẩn (Tag) | [Giá trị thực tế đầu ra (Logic/HMI)] Giá trị biến điều khiển CV tính theo phần trăm toàn dải đo (0..100% Span) |
+| **`Val_ActExecT`** | `REAL` | `0` | Ẩn (Tag) | [Giá trị thực tế đầu ra (Logic/HMI)] Chu kỳ thời gian thực thi thực tế của thuật toán PID (Actual Execution Interval, tính bằng giây) |
+| **`Val_Init`** | `REAL` | `0` | Ẩn (Tag) | [Giá trị thực tế đầu ra (Logic/HMI)] Giá trị khởi tạo (Initialization Value, đơn vị PVEU) gửi ngược lên vòng PID sơ cấp (Primary Loop) trong cấu trúc Cascade |
+| **`Val_PVEUMin`** | `REAL` | `0` | Ẩn (Tag) | [Giá trị thực tế đầu ra (Logic/HMI)] Giá trị cận dưới của dải đo đơn vị kỹ thuật PV = MIN(Cfg_PVEUMin, Cfg_PVEUMax) |
+| **`Val_PVEUMax`** | `REAL` | `100` | Ẩn (Tag) | [Giá trị thực tế đầu ra (Logic/HMI)] Giá trị cận trên của dải đo đơn vị kỹ thuật PV = MAX(Cfg_PVEUMin, Cfg_PVEUMax) |
+| **`Val_CVEUMin`** | `REAL` | `0` | Ẩn (Tag) | [Giá trị thực tế đầu ra (Logic/HMI)] Giá trị cận dưới của dải đơn vị kỹ thuật ngõ ra CV = MIN(Cfg_CVEUMin, Cfg_CVEUMax) |
+| **`Val_CVEUMax`** | `REAL` | `100` | Ẩn (Tag) | [Giá trị thực tế đầu ra (Logic/HMI)] Giá trị cận trên của dải đơn vị kỹ thuật ngõ ra CV = MAX(Cfg_CVEUMin, Cfg_CVEUMax) |
+| **`SrcQ_IO`** | `DINT` | `0` | Ẩn (Tag) | Mã nguồn gốc và chất lượng của kênh tín hiệu I/O sơ cấp (kiểu liệt kê enum) |
+| **`SrcQ`** | `DINT` | `0` | Ẩn (Tag) | Mã nguồn gốc và chất lượng dữ liệu tổng hợp cuối cùng (0 = Tín hiệu thực Tốt đã xác nhận, 1 = Tín hiệu thực Tốt giả định, 2 = Không cấu hình phản hồi/Tốt giả định, 8 = Đang mô phỏng, 9 = Mô phỏng vòng lặp, 10 = Giá trị nhập tay, 16 = Ngoài đặc tính kỹ thuật, 17 = Thay thế tại thiết bị/bus, 18 = Thay thế bởi Bảo trì, 19 = Ngắt bảo vệ giữ giá trị cũ, 20 = Ngắt bảo vệ dùng giá trị thay thế, 32 = Lỗi tín hiệu vượt dải/NaN, 33 = Lỗi kênh I/O, 34 = Lỗi module I/O, 35 = Lỗi cấu hình) |
+| **`Val_Sts`** | `DINT` | `0` | Ẩn (Tag) | [Giá trị thực tế đầu ra (Logic/HMI)] Mã trạng thái chế độ vòng điều khiển PID: 0 = Chưa xác định / Ngưng phục vụ, 1 = Chế độ Bằng tay (Manual), 2 = Chế độ Tự động (Auto), 3 = Chế độ Tầng (Cascade không tỷ lệ), 4 = Chế độ Tầng có Tỷ lệ (Cascade + Ratio) |
+| **`Val_Fault`** | `DINT` | `0` | Ẩn (Tag) | [Giá trị thực tế đầu ra (Logic/HMI)] Mã trạng thái lỗi thiết bị (Device Fault Status — kiểu liệt kê enum: 0 = Không lỗi, 16 = Lỗi khởi động/mở, 17 = Lỗi dừng/đóng, 20 = Lo, 21 = Hi, 24 = LoLo, 25 = HiHi, 32 = Fail/I/O Fault, 34 = Lỗi cấu hình CfgErr) |
+| **`Val_State`** | `DINT` | `0` | Ẩn (Tag) | [Giá trị thực tế đầu ra (Logic/HMI)] Mã trạng thái máy trạng thái nội bộ (Internal Logic State) dùng để tạo hiệu ứng chuyển động sơ đồ trạng thái trên HMI Faceplate |
+| **`Val_NotifyAll`** | `DINT` | `0` | Ẩn (Tag) | [Giá trị thực tế đầu ra (Logic/HMI)] Mã mức độ ưu tiên cảnh báo cao nhất và trạng thái xác nhận tổng hợp của khối này cộng với các đối tượng kênh/quá tải liên kết |
+| **`Val_UnackAlmC`** | `DINT` | `0` | Ẩn (Tag) | [Giá trị thực tế đầu ra (Logic/HMI)] Tổng số lượng cảnh báo hiện đang chưa được xác nhận (Unacknowledged Alarms Count) |
+| **`Val_Owner`** | `DINT` | `0` | Ẩn (Tag) | [Giá trị thực tế đầu ra (Logic/HMI)] Mã định danh Chủ sở hữu hiện hành của đối tượng (Current Object Owner ID: 0 = Đang không bị chiếm quyền) |
+| **`Sts_InstrFaults1`** | `DINT` | `2#0000_0000_0000_0000_0000_0000_0000_0000` | Ẩn (Tag) | [Cờ báo trạng thái logic (Status)] Từ trạng thái lỗi nội bộ số 1 của khối lệnh PIDE chuẩn (tham khảo tài liệu trợ giúp lệnh PIDE trong Studio 5000) |
+| **`Sts_InstrFaults2`** | `DINT` | `2#0000_0000_0000_0000_0000_0000_0000_0000` | Ẩn (Tag) | [Cờ báo trạng thái logic (Status)] Từ trạng thái lỗi nội bộ số 2 của khối lệnh PIDE chuẩn (tham khảo tài liệu trợ giúp lệnh PIDE trong Studio 5000) |
+| **`Sts_Casc`** | `BOOL` | `0` | Hiện (Pin) | [Cờ báo trạng thái logic (Status)] 1 = Vòng điều khiển đang ở chế độ Tầng hoặc Tỷ lệ (Cascade / Ratio Loop Mode) |
+| **`Sts_Auto`** | `BOOL` | `0` | Hiện (Pin) | [Cờ báo trạng thái logic (Status)] 1 = Vòng điều khiển đang ở chế độ Tự động (Automatic Loop Mode) |
+| **`Sts_Man`** | `BOOL` | `0` | Hiện (Pin) | [Cờ báo trạng thái logic (Status)] 1 = Vòng điều khiển đang ở chế độ Bằng tay (Manual Loop Mode) |
+| **`Sts_NormLM`** | `BOOL` | `0` | Ẩn (Tag) | [Cờ báo trạng thái logic (Status)] 1 = Vòng điều khiển đang ở đúng chế độ Mặc định chuẩn (Normal Loop Mode theo Cfg_NormLM) |
+| **`Sts_Initializing`** | `BOOL` | `0` | Ẩn (Tag) | [Cờ báo trạng thái logic (Status)] 1 = Ngõ ra CV của vòng điều khiển đang khởi tạo bám theo yêu cầu từ vòng thứ cấp phía sau (Secondary Loop) |
+| **`Sts_InitReq`** | `BOOL` | `0` | Ẩn (Tag) | [Cờ báo trạng thái logic (Status)] 1 = Đang phát yêu cầu khởi tạo bám giá trị ngược lên vòng điều khiển sơ cấp phía trước (Primary Loop) |
+| **`Sts_WindupHi`** | `BOOL` | `0` | Ẩn (Tag) | [Cờ báo trạng thái logic (Status)] 1 = Vòng điều khiển đang chạm bão hòa giới hạn trên (gửi lên chân Inp_WindupHi của vòng sơ cấp để chống bão hòa tích phân) |
+| **`Sts_WindupLo`** | `BOOL` | `0` | Ẩn (Tag) | [Cờ báo trạng thái logic (Status)] 1 = Vòng điều khiển đang chạm bão hòa giới hạn dưới (gửi lên chân Inp_WindupLo của vòng sơ cấp để chống bão hòa tích phân) |
+| **`Sts_ZCDBOn`** | `BOOL` | `0` | Ẩn (Tag) | [Cờ báo trạng thái logic (Status)] 1 = Sai lệch PV đang nằm trong vùng chết qua điểm 0 (Zero-Crossing Deadband), ngõ ra CV được giữ nguyên không đổi |
+| **`Sts_RatioClamped`** | `BOOL` | `0` | Ẩn (Tag) | [Cờ báo trạng thái logic (Status)] 1 = Hệ số tỷ lệ (Ratio) đang bị kẹp tại giới hạn Cfg_MinRatio hoặc Cfg_MaxRatio |
+| **`Sts_SPBad`** | `BOOL` | `0` | Ẩn (Tag) | [Cờ báo trạng thái logic (Status)] 1 = Giá trị đặt Setpoint (SP) không hợp lệ hoặc tín hiệu Cascade SP bị lỗi truyền thông |
+| **`Sts_IntlkSP`** | `BOOL` | `0` | Ẩn (Tag) | [Cờ báo trạng thái logic (Status)] 1 = Giá trị đặt SP đang bị cưỡng bức chuyển về giá trị an toàn (Cfg_IntlkSP) do cơ chế ngắt bảo vệ |
+| **`Sts_SPHeld`** | `BOOL` | `0` | Ẩn (Tag) | [Cờ báo trạng thái logic (Status)] 1 = Giá trị đặt SP đang được giữ ở giá trị tốt cuối cùng do cơ chế ngắt bảo vệ (Shed) |
+| **`Sts_SPShedPV`** | `BOOL` | `0` | Ẩn (Tag) | [Cờ báo trạng thái logic (Status)] 1 = Giá trị đặt SP được đặt bằng giá trị PV hiện tại do cơ chế ngắt bảo vệ |
+| **`Sts_SPShed`** | `BOOL` | `0` | Ẩn (Tag) | [Cờ báo trạng thái logic (Status)] 1 = Giá trị đặt SP đang bị chi phối bởi cơ chế ngắt bảo vệ (Shed); 0 = SP bình thường |
+| **`Sts_SPTrackPV`** | `BOOL` | `0` | Ẩn (Tag) | [Cờ báo trạng thái logic (Status)] 1 = Giá trị đặt SP đang tự động bám theo giá trị PV thực tế (PV Tracking khi đang ở chế độ Manual) |
+| **`Sts_SPClamped`** | `BOOL` | `0` | Ẩn (Tag) | [Cờ báo trạng thái logic (Status)] 1 = Giá trị đặt Setpoint (SP) đang bị kẹp tại ngưỡng giới hạn Cfg_MinSP hoặc Cfg_MaxSP |
+| **`Sts_SPRamping`** | `BOOL` | `0` | Ẩn (Tag) | [Cờ báo trạng thái logic (Status)] 1 = Giá trị đặt SP đang trong quá trình tăng/giảm theo độ dốc tiến về Val_SPSet (0 = Đã hoàn tất Ramp) |
+| **`Sts_SkipSPRoCLim`** | `BOOL` | `0` | Ẩn (Tag) | [Cờ báo trạng thái logic (Status)] 1 = Đang bỏ qua bộ giới hạn tốc độ thay đổi SP |
+| **`Sts_PVBad`** | `BOOL` | `0` | Ẩn (Tag) | [Cờ báo trạng thái logic (Status)] 1 = Chất lượng tín hiệu PV Xấu (Bad Quality) hoặc tín hiệu vượt ngoài dải lỗi (Out of Range) |
+| **`Sts_PVUncertain`** | `BOOL` | `0` | Ẩn (Tag) | [Cờ báo trạng thái logic (Status)] 1 = Chất lượng tín hiệu PV Không chắc chắn (Uncertain Quality) |
+| **`Sts_FFBad`** | `BOOL` | `0` | Ẩn (Tag) | [Cờ báo trạng thái logic (Status)] 1 = Giá trị bù nhiễu tiến cử (Feedforward Term) không hợp lệ |
+| **`Sts_FFPrevBad`** | `BOOL` | `0` | Ẩn (Tag) | [Cờ báo trạng thái logic (Status)] 1 = Giá trị phản hồi Inp_FFPrev nằm ngoài dải -100..100% hoặc không phải là số hợp lệ (NaN) |
+| **`Sts_CVBad`** | `BOOL` | `0` | Ẩn (Tag) | [Cờ báo trạng thái logic (Status)] 1 = Giá trị CV bị lỗi chất lượng xấu, không hợp lệ hoặc lỗi truyền thông kênh xuất CV |
+| **`Sts_CVPrevBad`** | `BOOL` | `0` | Ẩn (Tag) | [Cờ báo trạng thái logic (Status)] 1 = Giá trị phản hồi Inp_CVPrev nằm ngoài dải 0..100% hoặc không phải là số hợp lệ (NaN) |
+| **`Sts_HandFdbkBad`** | `BOOL` | `0` | Ẩn (Tag) | [Cờ báo trạng thái logic (Status)] 1 = Tín hiệu phản hồi vị trí tay (Inp_HandFdbk / Tieback) bị lỗi chất lượng xấu hoặc mất truyền thông |
+| **`Sts_IntlkCV`** | `BOOL` | `0` | Ẩn (Tag) | [Cờ báo trạng thái logic (Status)] 1 = Giá trị ngõ ra CV đang bị cưỡng bức đưa về giá trị an toàn liên động (Cfg_IntlkCV) do tác động ngắt bảo vệ |
+| **`Sts_CVHeld`** | `BOOL` | `0` | Ẩn (Tag) | [Cờ báo trạng thái logic (Status)] 1 = Giá trị ngõ ra CV đang được giữ nguyên tại giá trị tốt cuối cùng (Hold Last Good CV) do tác động ngắt bảo vệ (Shed) |
+| **`Sts_CVShed`** | `BOOL` | `0` | Ẩn (Tag) | [Cờ báo trạng thái logic (Status)] 1 = Ngõ ra CV đang bị chi phối bởi cơ chế ngắt bảo vệ (Shed); 0 = CV điều khiển bình thường từ Prog/Oper/Ovrd/PID |
+| **`Sts_CVClamped`** | `BOOL` | `0` | Ẩn (Tag) | [Cờ báo trạng thái logic (Status)] 1 = Giá trị CV đang bị kẹp tại giới hạn Min/Max (dùng để hiển thị cờ kẹp trên HMI Faceplate) |
+| **`Sts_CVRamping`** | `BOOL` | `0` | Ẩn (Tag) | [Cờ báo trạng thái logic (Status)] 1 = Giá trị CV đang thay đổi theo độ dốc tiến về Val_CVSet (0 = Đã đạt tới giá trị đặt) |
+| **`Sts_Active`** | `BOOL` | `0` | Ẩn (Tag) | [Cờ báo trạng thái logic (Status)] 1 = Giá trị ngõ ra CV lớn hơn ngưỡng kích hoạt (Cfg_MaxInactiveCV), hiển thị biểu tượng hoạt động trên HMI |
+| **`Sts_Available`** | `BOOL` | `0` | Ẩn (Tag) | [Cờ báo trạng thái logic (Status)] 1 = Thiết bị sẵn sàng cho Chương trình tự động (Program) điều khiển (đang ở chế độ Program và không có lỗi/liên động ngắt) |
+| **`Sts_Bypass`** | `BOOL` | `0` | Ẩn (Tag) | [Cờ báo trạng thái logic (Status)] 1 = Các điều kiện Khóa liên động (Interlock) và Cho phép (Permissive) có quyền Bypass hiện đang được bỏ qua (Bypassed) |
+| **`Sts_BypActive`** | `BOOL` | `0` | Ẩn (Tag) | [Cờ báo trạng thái logic (Status)] 1 = Chế độ Bypass bảo trì đang kích hoạt (gửi sang khối P_Intlk / P_Perm để cho phép bỏ qua các điều kiện có quyền Bypass) |
+| **`Sts_NotRdy`** | `BOOL` | `0` | Ẩn (Tag) | [Cờ báo trạng thái logic (Status)] 1 = Thiết bị chưa sẵn sàng hoạt động (kiểm tra các bit Nrdy_* chi tiết để biết nguyên nhân cụ thể) |
+| **`Nrdy_CfgErr`** | `BOOL` | `0` | Ẩn (Tag) | [Cờ báo nguyên nhân thiết bị chưa sẵn sàng] 1 = Thiết bị chưa sẵn sàng hoạt động do: Lỗi cài đặt thông số cấu hình (Configuration Error) |
+| **`Nrdy_Init`** | `BOOL` | `0` | Ẩn (Tag) | [Cờ báo nguyên nhân thiết bị chưa sẵn sàng] 1 = Thiết bị chưa sẵn sàng: Vòng điều khiển đang được khởi tạo ép về chế độ Bằng tay (Initialized to Manual Mode) |
+| **`Nrdy_Intlk`** | `BOOL` | `0` | Ẩn (Tag) | [Cờ báo nguyên nhân thiết bị chưa sẵn sàng] 1 = Thiết bị chưa sẵn sàng hoạt động do: Điều kiện Khóa liên động an toàn không thỏa mãn (Interlock Not OK) |
+| **`Nrdy_IOFault`** | `BOOL` | `0` | Ẩn (Tag) | [Cờ báo nguyên nhân thiết bị chưa sẵn sàng] 1 = Thiết bị chưa sẵn sàng hoạt động do: Lỗi truyền thông thẻ I/O (yêu cầu nhấn Reset) |
+| **`Nrdy_OoS`** | `BOOL` | `0` | Ẩn (Tag) | [Cờ báo nguyên nhân thiết bị chưa sẵn sàng] 1 = Thiết bị chưa sẵn sàng hoạt động do: Đang ở chế độ Ngưng phục vụ (Out of Service) |
+| **`Sts_MaintByp`** | `BOOL` | `0` | Ẩn (Tag) | [Cờ báo trạng thái logic (Status)] 1 = Đang có tác vụ Bypass bảo trì hoặc cưỡng bức bảo trì hoạt động (hiển thị biểu tượng Bypass trên HMI) |
+| **`Sts_AlmInh`** | `BOOL` | `0` | Ẩn (Tag) | [Cờ báo trạng thái logic (Status)] 1 = Đang có ít nhất một cảnh báo bị Tạm hoãn (Shelved), Vô hiệu hóa (Disabled) hoặc Ức chế (Suppressed) — hiển thị biểu tượng chữ "I" trên HMI |
+| **`Sts_Err`** | `BOOL` | `0` | Hiện (Pin) | [Cờ báo trạng thái logic (Status)] 1 = Có lỗi cài đặt thông số cấu hình Cfg_* (kiểm tra các bit Err_* chi tiết để biết thông số bị nhập sai) |
+| **`Err_Timer`** | `BOOL` | `0` | Ẩn (Tag) | [Cờ báo lỗi cài đặt thông số Cfg_*] 1 = Lỗi cấu hình: Giá trị đặt bộ định thời gian (Timer Preset) nằm ngoài phạm vi hợp lệ 0..2.147.483 giây |
+| **`Err_Alarm`** | `BOOL` | `0` | Ẩn (Tag) | [Cờ báo lỗi cài đặt thông số Cfg_*] 1 = Lỗi cấu hình cảnh báo: Thời gian duy trì tối thiểu (Min On Time), thời gian tạm hoãn (Shelf Time) hoặc mức độ nghiêm trọng (Severity 1..1000) không hợp lệ |
+| **`Err_RatioLim`** | `BOOL` | `0` | Ẩn (Tag) | [Cờ báo lỗi cài đặt thông số Cfg_*] 1 = Lỗi cấu hình: Giới hạn kẹp hệ số tỷ lệ (Cfg_MinRatio / Cfg_MaxRatio) không hợp lệ |
+| **`Err_SPLim`** | `BOOL` | `0` | Ẩn (Tag) | [Cờ báo lỗi cài đặt thông số Cfg_*] 1 = Lỗi cấu hình: Giới hạn kẹp giá trị đặt Setpoint bị ngược hoặc không hợp lệ (Cfg_MinSP > Cfg_MaxSP) |
+| **`Err_CVLim`** | `BOOL` | `0` | Ẩn (Tag) | [Cờ báo lỗi cài đặt thông số Cfg_*] 1 = Lỗi cấu hình: Giới hạn kẹp biên độ ngõ ra CV không hợp lệ (Cfg_MinCV > Cfg_MaxCV) |
+| **`Err_PVEU`** | `BOOL` | `0` | Ẩn (Tag) | [Cờ báo lỗi cài đặt thông số Cfg_*] 1 = Lỗi cấu hình: Dải đơn vị kỹ thuật của PV không hợp lệ (Cfg_PVEUMin = Cfg_PVEUMax) |
+| **`Err_CVEU`** | `BOOL` | `0` | Ẩn (Tag) | [Cờ báo lỗi cài đặt thông số Cfg_*] 1 = Lỗi cấu hình: Giới hạn quy đổi đơn vị kỹ thuật của ngõ ra CV không hợp lệ (Cfg_CVEUMin = Cfg_CVEUMax) |
+| **`Err_CVRaw`** | `BOOL` | `0` | Ẩn (Tag) | [Cờ báo lỗi cài đặt thông số Cfg_*] 1 = Lỗi cấu hình: Giới hạn đơn vị thô (Raw) của ngõ ra CV không hợp lệ (Cfg_CVRawMin = Cfg_CVRawMax) |
+| **`Err_ZCDB`** | `BOOL` | `0` | Ẩn (Tag) | [Cờ báo lỗi cài đặt thông số Cfg_*] 1 = Lỗi cấu hình: Vùng chết qua điểm không của vòng điều khiển (Zero-Crossing Deadband) âm hoặc không hợp lệ |
+| **`Sts_Hand`** | `BOOL` | `0` | Hiện (Pin) | [Cờ báo trạng thái logic (Status)] 1 = Đang ở chế độ Điều khiển bằng tay tại chỗ (Hand — ưu tiên cao hơn OoS, Maint, Ovrd, Ext, Prog, Oper) |
+| **`Sts_OoS`** | `BOOL` | `0` | Hiện (Pin) | [Cờ báo trạng thái logic (Status)] 1 = Đang ở chế độ Ngưng phục vụ (Out of Service — ưu tiên cao hơn Maint, Ovrd, Ext, Prog, Oper) |
+| **`Sts_Maint`** | `BOOL` | `0` | Hiện (Pin) | [Cờ báo trạng thái logic (Status)] 1 = Đang ở chế độ Bảo trì (Maintenance — ưu tiên cao hơn Ovrd, Ext, Prog, Oper) |
+| **`Sts_Ovrd`** | `BOOL` | `0` | Hiện (Pin) | [Cờ báo trạng thái logic (Status)] 1 = Đang ở chế độ Cưỡng bức ưu tiên (Override — ưu tiên cao hơn Ext, Prog, Oper) |
+| **`Sts_Ext`** | `BOOL` | `0` | Hiện (Pin) | [Cờ báo trạng thái logic (Status)] 1 = Đang ở chế độ Điều khiển ngoài (External — ưu tiên cao hơn Prog, Oper) |
+| **`Sts_Prog`** | `BOOL` | `0` | Hiện (Pin) | [Cờ báo trạng thái logic (Status)] 1 = Đang ở chế độ Chương trình tự động (Program) |
+| **`Sts_ProgLocked`** | `BOOL` | `0` | Ẩn (Tag) | [Cờ báo trạng thái logic (Status)] 1 = Đang ở chế độ Chương trình tự động và đã Khóa (Program Locked — không cho Operator lấy quyền) |
+| **`Sts_Oper`** | `BOOL` | `0` | Hiện (Pin) | [Cờ báo trạng thái logic (Status)] 1 = Đang ở chế độ Người vận hành trên HMI (Operator) |
+| **`Sts_OperLocked`** | `BOOL` | `0` | Ẩn (Tag) | [Cờ báo trạng thái logic (Status)] 1 = Đang ở chế độ Người vận hành và đã Khóa (Operator Locked — không cho Program lấy quyền) |
+| **`Sts_Normal`** | `BOOL` | `0` | Ẩn (Tag) | [Cờ báo trạng thái logic (Status)] 1 = Nguồn lệnh hiện hành đang khớp với nguồn lệnh Bình thường mặc định (Program hoặc Operator theo Cfg_ProgNormal) |
+| **`Sts_ExtReqInh`** | `BOOL` | `0` | Ẩn (Tag) | [Cờ báo trạng thái logic (Status)] 1 = Yêu cầu chuyển sang chế độ External đang bị khóa cấm (không thể chuyển sang External từ trạng thái hiện tại) |
+| **`Sts_ProgReqInh`** | `BOOL` | `0` | Ẩn (Tag) | [Cờ báo trạng thái logic (Status)] 1 = Yêu cầu chuyển sang chế độ Program đang bị khóa cấm (không thể chuyển sang Program từ trạng thái hiện tại) |
+| **`Sts_MAcqRcvd`** | `BOOL` | `0` | Ẩn (Tag) | [Cờ báo trạng thái logic (Status)] 1 = Đã nhận được lệnh Chiếm quyền bảo trì (MCmd_Acq) trong chu kỳ quét hiện tại |
+| **`Sts_RdyReset`** | `BOOL` | `0` | Ẩn (Tag) | [Cờ báo trạng thái logic (Status)] 1 = Có cảnh báo chốt (Latched) hoặc chốt ngắt bảo vệ (Shed) đã hết lỗi và sẵn sàng nhận lệnh Reset |
+| **`Sts_RdyAck`** | `BOOL` | `0` | Ẩn (Tag) | [Cờ báo trạng thái logic (Status)] 1 = Có cảnh báo đang chờ được nhấn Xác nhận (Acknowledge) |
+| **`Sts_HiHiDevCmp`** | `BOOL` | `0` | Ẩn (Tag) | [Cờ báo trạng thái logic (Status)] 1 = Tín hiệu đầu vào hiện đang vượt ngưỡng so sánh của độ lệch Rất Cao (High-High Deviation) (trước khi tính thời gian trễ và cổng Gate) |
+| **`Sts_HiHiDevGate`** | `BOOL` | `0` | Ẩn (Tag) | [Cờ báo trạng thái logic (Status)] 1 = Bộ định thời trễ mở cổng (Gate Delay) của độ lệch Rất Cao (High-High Deviation) đã đếm xong, đang cho phép giám sát |
+| **`Sts_HiHiDev`** | `BOOL` | `1` | Ẩn (Tag) | [Cờ báo trạng thái logic (Status)] 1 = Đang xuất hiện điều kiện độ lệch Rất Cao (High-High Deviation) |
+| **`Alm_HiHiDev`** | `BOOL` | `0` | Ẩn (Tag) | [Cờ báo động (1 = Đang báo động)] 1 = Đang kích hoạt báo động cho độ lệch Rất Cao (High-High Deviation) |
+| **`Ack_HiHiDev`** | `BOOL` | `1` | Ẩn (Tag) | [Cờ xác nhận báo động (1 = Đã Ack)] 1 = Báo động độ lệch Rất Cao (High-High Deviation) đã được Xác nhận (Acknowledged); 0 = Chưa xác nhận |
+| **`Sts_HiHiDevDisabled`** | `BOOL` | `0` | Ẩn (Tag) | [Cờ báo trạng thái logic (Status)] 1 = Cảnh báo độ lệch Rất Cao (High-High Deviation) hiện đang bị Vô hiệu hóa (Disabled) bởi nhân viên bảo trì |
+| **`Sts_HiHiDevShelved`** | `BOOL` | `0` | Ẩn (Tag) | [Cờ báo trạng thái logic (Status)] 1 = Cảnh báo độ lệch Rất Cao (High-High Deviation) hiện đang bị Tạm hoãn (Shelved) bởi người vận hành |
+| **`Sts_HiHiDevSuppressed`** | `BOOL` | `0` | Ẩn (Tag) | [Cờ báo trạng thái logic (Status)] 1 = Cảnh báo độ lệch Rất Cao (High-High Deviation) hiện đang bị Ức chế (Suppressed) bởi chương trình PLC |
+| **`Sts_HiDevCmp`** | `BOOL` | `0` | Ẩn (Tag) | [Cờ báo trạng thái logic (Status)] 1 = Tín hiệu đầu vào hiện đang vượt ngưỡng so sánh của độ lệch Cao (High Deviation) (trước khi tính thời gian trễ và cổng Gate) |
+| **`Sts_HiDevGate`** | `BOOL` | `0` | Ẩn (Tag) | [Cờ báo trạng thái logic (Status)] 1 = Bộ định thời trễ mở cổng (Gate Delay) của độ lệch Cao (High Deviation) đã đếm xong, đang cho phép giám sát |
+| **`Sts_HiDev`** | `BOOL` | `1` | Ẩn (Tag) | [Cờ báo trạng thái logic (Status)] 1 = Đang xuất hiện điều kiện độ lệch Cao (High Deviation) |
+| **`Alm_HiDev`** | `BOOL` | `0` | Ẩn (Tag) | [Cờ báo động (1 = Đang báo động)] 1 = Đang kích hoạt báo động cho độ lệch Cao (High Deviation) |
+| **`Ack_HiDev`** | `BOOL` | `1` | Ẩn (Tag) | [Cờ xác nhận báo động (1 = Đã Ack)] 1 = Báo động độ lệch Cao (High Deviation) đã được Xác nhận (Acknowledged); 0 = Chưa xác nhận |
+| **`Sts_HiDevDisabled`** | `BOOL` | `0` | Ẩn (Tag) | [Cờ báo trạng thái logic (Status)] 1 = Cảnh báo độ lệch Cao (High Deviation) hiện đang bị Vô hiệu hóa (Disabled) bởi nhân viên bảo trì |
+| **`Sts_HiDevShelved`** | `BOOL` | `0` | Ẩn (Tag) | [Cờ báo trạng thái logic (Status)] 1 = Cảnh báo độ lệch Cao (High Deviation) hiện đang bị Tạm hoãn (Shelved) bởi người vận hành |
+| **`Sts_HiDevSuppressed`** | `BOOL` | `0` | Ẩn (Tag) | [Cờ báo trạng thái logic (Status)] 1 = Cảnh báo độ lệch Cao (High Deviation) hiện đang bị Ức chế (Suppressed) bởi chương trình PLC |
+| **`Sts_LoDevCmp`** | `BOOL` | `0` | Ẩn (Tag) | [Cờ báo trạng thái logic (Status)] 1 = Tín hiệu đầu vào hiện đang vượt ngưỡng so sánh của độ lệch Thấp (Low Deviation) (trước khi tính thời gian trễ và cổng Gate) |
+| **`Sts_LoDevGate`** | `BOOL` | `0` | Ẩn (Tag) | [Cờ báo trạng thái logic (Status)] 1 = Bộ định thời trễ mở cổng (Gate Delay) của độ lệch Thấp (Low Deviation) đã đếm xong, đang cho phép giám sát |
+| **`Sts_LoDev`** | `BOOL` | `1` | Ẩn (Tag) | [Cờ báo trạng thái logic (Status)] 1 = Đang xuất hiện điều kiện độ lệch Thấp (Low Deviation) |
+| **`Alm_LoDev`** | `BOOL` | `0` | Ẩn (Tag) | [Cờ báo động (1 = Đang báo động)] 1 = Đang kích hoạt báo động cho độ lệch Thấp (Low Deviation) |
+| **`Ack_LoDev`** | `BOOL` | `1` | Ẩn (Tag) | [Cờ xác nhận báo động (1 = Đã Ack)] 1 = Báo động độ lệch Thấp (Low Deviation) đã được Xác nhận (Acknowledged); 0 = Chưa xác nhận |
+| **`Sts_LoDevDisabled`** | `BOOL` | `0` | Ẩn (Tag) | [Cờ báo trạng thái logic (Status)] 1 = Cảnh báo độ lệch Thấp (Low Deviation) hiện đang bị Vô hiệu hóa (Disabled) bởi nhân viên bảo trì |
+| **`Sts_LoDevShelved`** | `BOOL` | `0` | Ẩn (Tag) | [Cờ báo trạng thái logic (Status)] 1 = Cảnh báo độ lệch Thấp (Low Deviation) hiện đang bị Tạm hoãn (Shelved) bởi người vận hành |
+| **`Sts_LoDevSuppressed`** | `BOOL` | `0` | Ẩn (Tag) | [Cờ báo trạng thái logic (Status)] 1 = Cảnh báo độ lệch Thấp (Low Deviation) hiện đang bị Ức chế (Suppressed) bởi chương trình PLC |
+| **`Sts_LoLoDevCmp`** | `BOOL` | `0` | Ẩn (Tag) | [Cờ báo trạng thái logic (Status)] 1 = Tín hiệu đầu vào hiện đang vượt ngưỡng so sánh của độ lệch Rất Thấp (Low-Low Deviation) (trước khi tính thời gian trễ và cổng Gate) |
+| **`Sts_LoLoDevGate`** | `BOOL` | `0` | Ẩn (Tag) | [Cờ báo trạng thái logic (Status)] 1 = Bộ định thời trễ mở cổng (Gate Delay) của độ lệch Rất Thấp (Low-Low Deviation) đã đếm xong, đang cho phép giám sát |
+| **`Sts_LoLoDev`** | `BOOL` | `1` | Ẩn (Tag) | [Cờ báo trạng thái logic (Status)] 1 = Đang xuất hiện điều kiện độ lệch Rất Thấp (Low-Low Deviation) |
+| **`Alm_LoLoDev`** | `BOOL` | `0` | Ẩn (Tag) | [Cờ báo động (1 = Đang báo động)] 1 = Đang kích hoạt báo động cho độ lệch Rất Thấp (Low-Low Deviation) |
+| **`Ack_LoLoDev`** | `BOOL` | `1` | Ẩn (Tag) | [Cờ xác nhận báo động (1 = Đã Ack)] 1 = Báo động độ lệch Rất Thấp (Low-Low Deviation) đã được Xác nhận (Acknowledged); 0 = Chưa xác nhận |
+| **`Sts_LoLoDevDisabled`** | `BOOL` | `0` | Ẩn (Tag) | [Cờ báo trạng thái logic (Status)] 1 = Cảnh báo độ lệch Rất Thấp (Low-Low Deviation) hiện đang bị Vô hiệu hóa (Disabled) bởi nhân viên bảo trì |
+| **`Sts_LoLoDevShelved`** | `BOOL` | `0` | Ẩn (Tag) | [Cờ báo trạng thái logic (Status)] 1 = Cảnh báo độ lệch Rất Thấp (Low-Low Deviation) hiện đang bị Tạm hoãn (Shelved) bởi người vận hành |
+| **`Sts_LoLoDevSuppressed`** | `BOOL` | `0` | Ẩn (Tag) | [Cờ báo trạng thái logic (Status)] 1 = Cảnh báo độ lệch Rất Thấp (Low-Low Deviation) hiện đang bị Ức chế (Suppressed) bởi chương trình PLC |
+| **`Sts_IntlkTrip`** | `BOOL` | `1` | Ẩn (Tag) | [Cờ báo trạng thái logic (Status)] 1 = Đang xuất hiện điều kiện ngắt bảo vệ do vi phạm Khóa liên động (Interlock Trip) |
+| **`Alm_IntlkTrip`** | `BOOL` | `0` | Ẩn (Tag) | [Cờ báo động (1 = Đang báo động)] 1 = Đang kích hoạt báo động cho ngắt bảo vệ do vi phạm Khóa liên động (Interlock Trip) |
+| **`Ack_IntlkTrip`** | `BOOL` | `1` | Ẩn (Tag) | [Cờ xác nhận báo động (1 = Đã Ack)] 1 = Báo động ngắt bảo vệ do vi phạm Khóa liên động (Interlock Trip) đã được Xác nhận (Acknowledged); 0 = Chưa xác nhận |
+| **`Sts_IntlkTripDisabled`** | `BOOL` | `0` | Ẩn (Tag) | [Cờ báo trạng thái logic (Status)] 1 = Cảnh báo ngắt bảo vệ do vi phạm Khóa liên động (Interlock Trip) hiện đang bị Vô hiệu hóa (Disabled) bởi nhân viên bảo trì |
+| **`Sts_IntlkTripShelved`** | `BOOL` | `0` | Ẩn (Tag) | [Cờ báo trạng thái logic (Status)] 1 = Cảnh báo ngắt bảo vệ do vi phạm Khóa liên động (Interlock Trip) hiện đang bị Tạm hoãn (Shelved) bởi người vận hành |
+| **`Sts_IntlkTripSuppressed`** | `BOOL` | `0` | Ẩn (Tag) | [Cờ báo trạng thái logic (Status)] 1 = Cảnh báo ngắt bảo vệ do vi phạm Khóa liên động (Interlock Trip) hiện đang bị Ức chế (Suppressed) bởi chương trình PLC |
+| **`Sts_Fail`** | `BOOL` | `1` | Ẩn (Tag) | [Cờ báo trạng thái logic (Status)] 1 = Đang xuất hiện điều kiện lỗi tín hiệu / hỏng kênh đo (Signal Failure) |
+| **`Alm_Fail`** | `BOOL` | `0` | Ẩn (Tag) | [Cờ báo động (1 = Đang báo động)] 1 = Đang kích hoạt báo động cho lỗi tín hiệu / hỏng kênh đo (Signal Failure) |
+| **`Ack_Fail`** | `BOOL` | `1` | Ẩn (Tag) | [Cờ xác nhận báo động (1 = Đã Ack)] 1 = Báo động lỗi tín hiệu / hỏng kênh đo (Signal Failure) đã được Xác nhận (Acknowledged); 0 = Chưa xác nhận |
+| **`Sts_FailDisabled`** | `BOOL` | `0` | Ẩn (Tag) | [Cờ báo trạng thái logic (Status)] 1 = Cảnh báo lỗi tín hiệu / hỏng kênh đo (Signal Failure) hiện đang bị Vô hiệu hóa (Disabled) bởi nhân viên bảo trì |
+| **`Sts_FailShelved`** | `BOOL` | `0` | Ẩn (Tag) | [Cờ báo trạng thái logic (Status)] 1 = Cảnh báo lỗi tín hiệu / hỏng kênh đo (Signal Failure) hiện đang bị Tạm hoãn (Shelved) bởi người vận hành |
+| **`Sts_FailSuppressed`** | `BOOL` | `0` | Ẩn (Tag) | [Cờ báo trạng thái logic (Status)] 1 = Cảnh báo lỗi tín hiệu / hỏng kênh đo (Signal Failure) hiện đang bị Ức chế (Suppressed) bởi chương trình PLC |
+| **`MRdy_Rel`** | `BOOL` | `0` | Ẩn (Tag) | [Cờ cho phép sáng nút nhấn trên HMI] 1 = Sẵn sàng nhận lệnh MCmd_Rel (Nhả quyền điều khiển (Release) để trả về chế độ Operator/Program), cho phép sáng nút nhấn tương ứng trên HMI Faceplate |
+| **`ORdy_Unlock`** | `BOOL` | `0` | Ẩn (Tag) | [Cờ cho phép sáng nút nhấn trên HMI] 1 = Sẵn sàng nhận lệnh OCmd_Unlock (Mở khóa nguồn lệnh hiện tại (cho phép chuyển đổi giữa Operator và Program)), cho phép sáng nút nhấn tương ứng trên HMI Faceplate |
+| **`P_PIDE`** | `BOOL` | `0` | Ẩn (Tag) | Tham số định danh trùng tên khối AOI (P_PIDE) dùng cho công cụ tự động dò tìm thẻ (Auto-discovery) của phần mềm HMI |
 
 ## 4. Bảng chi tiết 59 Biến Cấu Hình Cục Bộ (`Local Configuration Tags`) của `P_PIDE`
 | Tên biến nội bộ (Local Tag) | Kiểu dữ liệu | Mặc định | Giải thích chức năng & Cách cấu hình hiển thị HMI |
 | :--- | :--- | :--- | :--- |
-| **`Cfg_Area`** | `STRING_Area` | `'area01'` | [Biến cấu hình thông số] Process Area for security |
-| **`Cfg_CascSPNavTag`** | `STRING_NavTag` | `''` | [Biến cấu hình thông số] Tagname for destination of Cascade SP Navigation button |
-| **`Cfg_CVEU`** | `STRING_8` | `'%'` | [Biến cấu hình thông số] CV Engineering Units displayed on HMI |
-| **`Cfg_CVNavTag`** | `STRING_NavTag` | `''` | [Biến cấu hình thông số] Tagname for destination of CV Navigation button |
-| **`Cfg_Desc`** | `STRING_40` | `'Advanced PID Control Loop'` | [Biến cấu hình thông số] Description displayed on HMI |
-| **`Cfg_Label`** | `STRING_20` | `'PID Loop'` | [Biến cấu hình thông số] Label for graphic symbol displayed on HMI |
-| **`Cfg_PVEU`** | `STRING_8` | `'%'` | [Biến cấu hình thông số] PV / Setpoint Engineering Units displayed on HMI |
-| **`Cfg_PVNavTag`** | `STRING_NavTag` | `''` | [Biến cấu hình thông số] Tagname for destination of PV Navigation button |
-| **`Cfg_Tag`** | `STRING_20` | `'P_PIDAdv'` | [Biến cấu hình thông số] Tagname displayed on HMI |
-| **`CmdSrc`** | `P_CmdSrc` | `{...}` | Khối con P_CmdSrc quản lý lựa chọn nguồn lệnh điều khiển |
-| **`Fail`** | `P_Alarm` | `{...}` | Loop (SP, PV or CV) Failure Alarm |
-| **`HiDev`** | `P_Alarm` | `{...}` | High Deviation Alarm |
-| **`HiDevGate`** | `P_Gate` | `{...}` | High Deviation Gate/Delay |
-| **`HiHiDev`** | `P_Alarm` | `{...}` | High-High Deviation Alarm |
-| **`HiHiDevGate`** | `P_Gate` | `{...}` | High-High Deviation Gate/Delay |
-| **`HMI_HasAutotune`** | `BOOL` | `0` | [Biến nội bộ giao diện HMI Faceplate] 1=P_PIDE_Only AOI has been modified to include Autotune par. on PIDE block |
-| **`HMI_Lib`** | `STRING_12` | `'RA-BAS'` | [Biến nội bộ giao diện HMI Faceplate] Tên thư viện màn hình đồ họa dùng để gọi cửa sổ HMI Faceplate |
-| **`HMI_Tab`** | `SINT` | `0` | [Biến nội bộ giao diện HMI Faceplate] Chỉ số tab hiển thị hiện hành (dùng cho màn hình FactoryTalk View ME) |
-| **`HMI_Type`** | `STRING_16` | `'P_PIDE'` | [Biến nội bộ giao diện HMI Faceplate] Chuỗi định danh kiểu khối AOI dùng cho điều hướng HMI và phần mềm thông tin |
-| **`IntlkTrip`** | `P_Alarm` | `{...}` | Interlock Trip Alarm |
-| **`LoDev`** | `P_Alarm` | `{...}` | Low Deviation Alarm |
-| **`LoDevGate`** | `P_Gate` | `{...}` | Low Deviation Gate/Delay |
-| **`LoLoDev`** | `P_Alarm` | `{...}` | Low-Low Deviation Alarm |
-| **`LoLoDevGate`** | `P_Gate` | `{...}` | Low-Low Deviation Gate/Delay |
-| **`MCmd_Bypass`** | `BOOL` | `0` | [Lệnh từ tab Bảo trì (HMI Maintenance)] Lệnh từ Nhân viên bảo trì (Maintenance) để Bypass all Bypassable Interlocks |
-| **`MCmd_Check`** | `BOOL` | `0` | [Lệnh từ tab Bảo trì (HMI Maintenance)] Lệnh từ Nhân viên bảo trì (Maintenance) để Check (not bypass) all Interlocks |
-| **`MRdy_Bypass`** | `BOOL` | `0` | [Cờ cho phép sáng nút nhấn trên HMI] 1 = Sẵn sàng nhận lệnh MCmd_Bypass (cho phép sáng nút nhấn tương ứng trên HMI Faceplate) |
-| **`MRdy_Check`** | `BOOL` | `0` | [Cờ cho phép sáng nút nhấn trên HMI] 1 = Sẵn sàng nhận lệnh MCmd_Check (cho phép sáng nút nhấn tương ứng trên HMI Faceplate) |
-| **`OCmd_Auto`** | `BOOL` | `0` | [Lệnh từ màn hình HMI Operator] Lệnh từ Người vận hành (Operator HMI) để select Automatic control |
-| **`OCmd_Casc`** | `BOOL` | `0` | [Lệnh từ màn hình HMI Operator] Lệnh từ Người vận hành (Operator HMI) để select Cascade / Ratio control |
-| **`OCmd_Man`** | `BOOL` | `0` | [Lệnh từ màn hình HMI Operator] Lệnh từ Người vận hành (Operator HMI) để select Manual control |
-| **`OCmd_NormLM`** | `BOOL` | `0` | [Lệnh từ màn hình HMI Operator] Lệnh từ Người vận hành (Operator HMI) để select Normal Loop Mode (see Cfg_NormLM) |
-| **`OCmd_Reset`** | `BOOL` | `0` | [Lệnh từ màn hình HMI Operator] Lệnh từ Người vận hành (Operator HMI) để Reset all Alarms requiring Reset |
-| **`OCmd_ResetAckAll`** | `BOOL` | `0` | [Lệnh từ màn hình HMI Operator] Lệnh từ Người vận hành (Operator HMI) để Reset all Alarms and latched Shed conditions |
-| **`OCmd_SPRampStart`** | `BOOL` | `0` | [Lệnh từ màn hình HMI Operator] Lệnh từ Người vận hành (Operator HMI) để initiate SP ramping |
-| **`OCmd_SPRampStop`** | `BOOL` | `0` | [Lệnh từ màn hình HMI Operator] Lệnh từ Người vận hành (Operator HMI) để stop SP ramping |
-| **`ORdy_Auto`** | `BOOL` | `0` | [Cờ cho phép sáng nút nhấn trên HMI] 1 = Sẵn sàng nhận lệnh OCmd_Auto (cho phép sáng nút nhấn tương ứng trên HMI Faceplate) |
-| **`ORdy_Casc`** | `BOOL` | `0` | [Cờ cho phép sáng nút nhấn trên HMI] 1 = Sẵn sàng nhận lệnh OCmd_Casc (cho phép sáng nút nhấn tương ứng trên HMI Faceplate) |
-| **`ORdy_CV`** | `BOOL` | `0` | [Cờ cho phép sáng nút nhấn trên HMI] 1 = Sẵn sàng nhận lệnh OSet_CV (enables data entry field) |
-| **`ORdy_Man`** | `BOOL` | `0` | [Cờ cho phép sáng nút nhấn trên HMI] 1 = Sẵn sàng nhận lệnh OCmd_Man (cho phép sáng nút nhấn tương ứng trên HMI Faceplate) |
-| **`ORdy_NormLM`** | `BOOL` | `0` | [Cờ cho phép sáng nút nhấn trên HMI] 1 = Sẵn sàng nhận lệnh OCmd_NormLM (cho phép sáng nút nhấn tương ứng trên HMI Faceplate) |
-| **`ORdy_Ratio`** | `BOOL` | `0` | [Cờ cho phép sáng nút nhấn trên HMI] 1 = Sẵn sàng nhận lệnh OSet_Ratio (enables data entry field) |
-| **`ORdy_Reset`** | `BOOL` | `0` | [Cờ cho phép sáng nút nhấn trên HMI] 1 = Sẵn sàng nhận lệnh OCmd_Reset (cho phép sáng nút nhấn tương ứng trên HMI Faceplate) |
-| **`ORdy_ResetAckAll`** | `BOOL` | `0` | [Cờ cho phép sáng nút nhấn trên HMI] 1=At least one Alarm or latched Shed condition requires Reset or Ack |
-| **`ORdy_SP`** | `BOOL` | `0` | [Cờ cho phép sáng nút nhấn trên HMI] 1 = Sẵn sàng nhận lệnh OSet_SP (enables data entry field) |
-| **`ORdy_SPRampStart`** | `BOOL` | `0` | [Cờ cho phép sáng nút nhấn trên HMI] 1 = Sẵn sàng nhận lệnh OCmd_RampSP (cho phép sáng nút nhấn tương ứng trên HMI Faceplate) |
-| **`ORdy_SPRampStop`** | `BOOL` | `0` | [Cờ cho phép sáng nút nhấn trên HMI] 1 = Sẵn sàng nhận lệnh OCmd_RampStop (cho phép sáng nút nhấn tương ứng trên HMI Faceplate) |
-| **`ORdy_SPRampT`** | `BOOL` | `0` | [Cờ cho phép sáng nút nhấn trên HMI] 1 = Sẵn sàng nhận lệnh OSet_SPRampT (enables data entry field) |
-| **`ORdy_SPRoCLimDec`** | `BOOL` | `0` | [Cờ cho phép sáng nút nhấn trên HMI] 1 = Sẵn sàng nhận lệnh OSet_SPRoCLimDec (enables data entry field) |
-| **`ORdy_SPRoCLimInc`** | `BOOL` | `0` | [Cờ cho phép sáng nút nhấn trên HMI] 1 = Sẵn sàng nhận lệnh OSet_SPRoCLimInc (enables data entry field) |
-| **`ORdy_SPTarget`** | `BOOL` | `0` | [Cờ cho phép sáng nút nhấn trên HMI] 1 = Sẵn sàng nhận lệnh OSet_SPTarget (enables data entry field) |
-| **`OSet_CV`** | `REAL` | `0` | [Giá trị đặt từ màn hình HMI Operator] Operator Setting for Controlled Variable (loop Manual) (CVEU) |
-| **`OSet_Ratio`** | `REAL` | `1` | [Giá trị đặt từ màn hình HMI Operator] Operator Setting for Ratio (loop CasRat and Ratio enabled) (unitless) |
-| **`OSet_SP`** | `REAL` | `0` | [Giá trị đặt từ màn hình HMI Operator] Operator Setting for Setpoint (loop Auto) (PVEU) |
-| **`OSet_SPRampT`** | `REAL` | `0` | [Giá trị đặt từ màn hình HMI Operator] Operator Setting for Setpoint Ramp Time (to reach target, for ramp wizard) (sec). Valid = 0.0 to 28800.0 seconds. |
-| **`OSet_SPRoCLimDec`** | `REAL` | `0` | [Giá trị đặt từ màn hình HMI Operator] Operator Setting for Setpoint Negative Rate of Change Limit (PVEU/sec) |
-| **`OSet_SPRoCLimInc`** | `REAL` | `0` | [Giá trị đặt từ màn hình HMI Operator] Operator Setting for Setpoint Positive Rate of Change Limit (PVEU/sec) |
-| **`OSet_SPTarget`** | `REAL` | `0` | [Giá trị đặt từ màn hình HMI Operator] Operator Setting for Setpoint Ramp Target (endpoint, for ramp wizard) |
-| **`Val_Notify`** | `DINT` | `0` | [Giá trị thực tế đầu ra (Logic/HMI)] Mã mức độ cảnh báo hiện tại và trạng thái xác nhận (0=Không lỗi, 2..9=Low..Urgent) |
+| **`Cfg_Area`** | `STRING_Area` | `'area01'` | [Biến cấu hình thông số] Tên phân khu công nghệ (Process Area, ví dụ: "area01") dùng để phân quyền bảo mật thao tác trên HMI |
+| **`Cfg_CascSPNavTag`** | `STRING_NavTag` | `''` | [Biến cấu hình thông số] Tên thẻ (Tagname) của khối sơ cấp cấp tín hiệu Cascade SP khi nhấn nút điều hướng trên HMI |
+| **`Cfg_CVEU`** | `STRING_8` | `'%'` | [Biến cấu hình thông số] Chuỗi đơn vị kỹ thuật của ngõ ra điều khiển CV hiển thị trên màn hình HMI |
+| **`Cfg_CVNavTag`** | `STRING_NavTag` | `''` | [Biến cấu hình thông số] Tên thẻ (Tagname) của khối cơ cấu chấp hành CV đích khi nhấn nút điều hướng CV trên HMI |
+| **`Cfg_Desc`** | `STRING_40` | `'Advanced PID Control Loop'` | [Biến cấu hình thông số] Chuỗi mô tả tên thiết bị/điểm đo hiển thị trên thanh tiêu đề của cửa sổ HMI Faceplate (tối đa 40 ký tự) |
+| **`Cfg_Label`** | `STRING_20` | `'PID Loop'` | [Biến cấu hình thông số] Nhãn tên ngắn gọn hiển thị bên cạnh biểu tượng đồ họa (Graphic Symbol) trên màn hình SCADA/HMI (tối đa 20 ký tự) |
+| **`Cfg_PVEU`** | `STRING_8` | `'%'` | [Biến cấu hình thông số] Chuỗi đơn vị kỹ thuật của biến sơ cấp PV hiển thị trên màn hình HMI |
+| **`Cfg_PVNavTag`** | `STRING_NavTag` | `''` | [Biến cấu hình thông số] Tên thẻ (Tagname) của khối cảm biến PV đích khi nhấn nút điều hướng PV trên HMI |
+| **`Cfg_Tag`** | `STRING_20` | `'P_PIDAdv'` | [Biến cấu hình thông số] Tên thẻ định danh (Tagname) của thiết bị hiển thị trên thanh tiêu đề cửa sổ HMI Faceplate (tối đa 20 ký tự) |
+| **`CmdSrc`** | `P_CmdSrc` | `{...}` | Khối con P_CmdSrc nội bộ quản lý phân quyền và chuyển mạch giữa 7 nguồn lệnh điều khiển (OoS, Hand, Maint, Ovrd, Ext, Prog, Oper) |
+| **`Fail`** | `P_Alarm` | `{...}` | [Khối con P_Alarm nội bộ] Quản lý toàn bộ vòng đời cảnh báo cho lỗi tín hiệu / hỏng kênh đo (Signal Failure) |
+| **`HiDev`** | `P_Alarm` | `{...}` | [Khối con P_Alarm nội bộ] Quản lý toàn bộ vòng đời cảnh báo cho độ lệch Cao (High Deviation) |
+| **`HiDevGate`** | `P_Gate` | `{...}` | [Khối con P_Gate nội bộ] Bộ định thời trễ mở cổng (Gate Delay), trễ bật (On-Delay) và trễ tắt (Off-Delay) cho độ lệch Cao (High Deviation) |
+| **`HiHiDev`** | `P_Alarm` | `{...}` | [Khối con P_Alarm nội bộ] Quản lý toàn bộ vòng đời cảnh báo cho độ lệch Rất Cao (High-High Deviation) |
+| **`HiHiDevGate`** | `P_Gate` | `{...}` | [Khối con P_Gate nội bộ] Bộ định thời trễ mở cổng (Gate Delay), trễ bật (On-Delay) và trễ tắt (Off-Delay) cho độ lệch Rất Cao (High-High Deviation) |
+| **`HMI_HasAutotune`** | `BOOL` | `0` | 1 = Khối P_PIDE đã được cấu hình liên kết tính năng Tự động dò thông số (Autotune) trên khối PIDE |
+| **`HMI_Lib`** | `STRING_12` | `'RA-BAS'` | Tên thư viện màn hình đồ họa (ví dụ: "RA-BAS") dùng để gọi cửa sổ HMI Faceplate |
+| **`HMI_Tab`** | `SINT` | `0` | Chỉ số Tab hiển thị hiện hành trên cửa sổ Faceplate (dùng cho màn hình FactoryTalk View ME) |
+| **`HMI_Type`** | `STRING_16` | `'P_PIDE'` | Chuỗi định danh kiểu khối AOI dùng cho điều hướng HMI Faceplate và phần mềm thông tin |
+| **`IntlkTrip`** | `P_Alarm` | `{...}` | [Khối con P_Alarm nội bộ] Quản lý toàn bộ vòng đời cảnh báo cho ngắt bảo vệ do vi phạm Khóa liên động (Interlock Trip) |
+| **`LoDev`** | `P_Alarm` | `{...}` | [Khối con P_Alarm nội bộ] Quản lý toàn bộ vòng đời cảnh báo cho độ lệch Thấp (Low Deviation) |
+| **`LoDevGate`** | `P_Gate` | `{...}` | [Khối con P_Gate nội bộ] Bộ định thời trễ mở cổng (Gate Delay), trễ bật (On-Delay) và trễ tắt (Off-Delay) cho độ lệch Thấp (Low Deviation) |
+| **`LoLoDev`** | `P_Alarm` | `{...}` | [Khối con P_Alarm nội bộ] Quản lý toàn bộ vòng đời cảnh báo cho độ lệch Rất Thấp (Low-Low Deviation) |
+| **`LoLoDevGate`** | `P_Gate` | `{...}` | [Khối con P_Gate nội bộ] Bộ định thời trễ mở cổng (Gate Delay), trễ bật (On-Delay) và trễ tắt (Off-Delay) cho độ lệch Rất Thấp (Low-Low Deviation) |
+| **`MCmd_Bypass`** | `BOOL` | `0` | [Lệnh từ tab Bảo trì (HMI Maintenance)] Lệnh từ Nhân viên bảo trì (Maintenance) để Bỏ qua (Bypass) tất cả các điều kiện Khóa liên động (Interlock) và Cho phép (Permissive) có quyền Bypass |
+| **`MCmd_Check`** | `BOOL` | `0` | [Lệnh từ tab Bảo trì (HMI Maintenance)] Lệnh từ Nhân viên bảo trì (Maintenance) để Kiểm tra lại bình thường (Check / Gỡ bỏ Bypass) toàn bộ điều kiện Khóa liên động và Cho phép |
+| **`MRdy_Bypass`** | `BOOL` | `0` | [Cờ cho phép sáng nút nhấn trên HMI] 1 = Sẵn sàng nhận lệnh MCmd_Bypass (Bỏ qua (Bypass) tất cả các điều kiện Khóa liên động (Interlock) và Cho phép (Permissive) có quyền Bypass), cho phép sáng nút nhấn tương ứng trên HMI Faceplate |
+| **`MRdy_Check`** | `BOOL` | `0` | [Cờ cho phép sáng nút nhấn trên HMI] 1 = Sẵn sàng nhận lệnh MCmd_Check (Kiểm tra lại bình thường (Check / Gỡ bỏ Bypass) toàn bộ điều kiện Khóa liên động và Cho phép), cho phép sáng nút nhấn tương ứng trên HMI Faceplate |
+| **`OCmd_Auto`** | `BOOL` | `0` | [Lệnh từ màn hình HMI Operator] Lệnh từ Người vận hành (Operator HMI) để Chuyển vòng điều khiển sang chế độ Tự động (Automatic Loop Mode) |
+| **`OCmd_Casc`** | `BOOL` | `0` | [Lệnh từ màn hình HMI Operator] Lệnh từ Người vận hành (Operator HMI) để Chuyển vòng điều khiển sang chế độ Tầng / Tỷ lệ (Cascade / Ratio Loop Mode) |
+| **`OCmd_Man`** | `BOOL` | `0` | [Lệnh từ màn hình HMI Operator] Lệnh từ Người vận hành (Operator HMI) để Chuyển vòng điều khiển sang chế độ Bằng tay (Manual Loop Mode) |
+| **`OCmd_NormLM`** | `BOOL` | `0` | [Lệnh từ màn hình HMI Operator] Lệnh từ Người vận hành (Operator HMI) để Chuyển vòng điều khiển về chế độ Mặc định chuẩn (Normal Loop Mode theo Cfg_NormLM) |
+| **`OCmd_Reset`** | `BOOL` | `0` | [Lệnh từ màn hình HMI Operator] Lệnh từ Người vận hành (Operator HMI) để Xóa (Reset) tất cả các chốt lỗi ngắt tải (Shed latches) và các cảnh báo đã hết điều kiện lỗi |
+| **`OCmd_ResetAckAll`** | `BOOL` | `0` | [Lệnh từ màn hình HMI Operator] Lệnh từ Người vận hành (Operator HMI) để Xóa (Reset) mọi chốt lỗi và đồng thời Xác nhận (Acknowledge) toàn bộ cảnh báo |
+| **`OCmd_SPRampStart`** | `BOOL` | `0` | [Lệnh từ màn hình HMI Operator] Lệnh từ Người vận hành (Operator HMI) để Bắt đầu chạy quy trình thay đổi giá trị đặt SP theo độ dốc (Start Setpoint Ramping) |
+| **`OCmd_SPRampStop`** | `BOOL` | `0` | [Lệnh từ màn hình HMI Operator] Lệnh từ Người vận hành (Operator HMI) để Dừng quy trình thay đổi giá trị đặt SP theo độ dốc (Stop Setpoint Ramping) |
+| **`ORdy_Auto`** | `BOOL` | `0` | [Cờ cho phép sáng nút nhấn trên HMI] 1 = Sẵn sàng nhận lệnh OCmd_Auto (Chuyển vòng điều khiển sang chế độ Tự động (Automatic Loop Mode)), cho phép sáng nút nhấn tương ứng trên HMI Faceplate |
+| **`ORdy_Casc`** | `BOOL` | `0` | [Cờ cho phép sáng nút nhấn trên HMI] 1 = Sẵn sàng nhận lệnh OCmd_Casc (Chuyển vòng điều khiển sang chế độ Tầng / Tỷ lệ (Cascade / Ratio Loop Mode)), cho phép sáng nút nhấn tương ứng trên HMI Faceplate |
+| **`ORdy_CV`** | `BOOL` | `0` | [Cờ cho phép nhập dữ liệu trên HMI] 1 = Sẵn sàng nhận giá trị đặt OSet_CV (Giá trị biến điều khiển đầu ra (Controlled Variable - CV, tính theo đơn vị kỹ thuật EU)), cho phép mở ô nhập số trên HMI Faceplate |
+| **`ORdy_Man`** | `BOOL` | `0` | [Cờ cho phép sáng nút nhấn trên HMI] 1 = Sẵn sàng nhận lệnh OCmd_Man (Chuyển vòng điều khiển sang chế độ Bằng tay (Manual Loop Mode)), cho phép sáng nút nhấn tương ứng trên HMI Faceplate |
+| **`ORdy_NormLM`** | `BOOL` | `0` | [Cờ cho phép sáng nút nhấn trên HMI] 1 = Sẵn sàng nhận lệnh OCmd_NormLM (Chuyển vòng điều khiển về chế độ Mặc định chuẩn (Normal Loop Mode theo Cfg_NormLM)), cho phép sáng nút nhấn tương ứng trên HMI Faceplate |
+| **`ORdy_Ratio`** | `BOOL` | `0` | [Cờ cho phép nhập dữ liệu trên HMI] 1 = Sẵn sàng nhận giá trị đặt OSet_Ratio (Hệ số tỷ lệ (Ratio, không thứ nguyên) khi vòng điều khiển chạy ở chế độ Cascade/Ratio), cho phép mở ô nhập số trên HMI Faceplate |
+| **`ORdy_Reset`** | `BOOL` | `0` | [Cờ cho phép sáng nút nhấn trên HMI] 1 = Sẵn sàng nhận lệnh OCmd_Reset (Xóa (Reset) tất cả các chốt lỗi ngắt tải (Shed latches) và các cảnh báo đã hết điều kiện lỗi), cho phép sáng nút nhấn tương ứng trên HMI Faceplate |
+| **`ORdy_ResetAckAll`** | `BOOL` | `0` | [Cờ cho phép sáng nút nhấn trên HMI] 1 = Sẵn sàng nhận lệnh OCmd_ResetAckAll (Xóa (Reset) mọi chốt lỗi và đồng thời Xác nhận (Acknowledge) toàn bộ cảnh báo), cho phép sáng nút nhấn tương ứng trên HMI Faceplate |
+| **`ORdy_SP`** | `BOOL` | `0` | [Cờ cho phép nhập dữ liệu trên HMI] 1 = Sẵn sàng nhận giá trị đặt OSet_SP (Giá trị đặt chính (Setpoint - SP, tính theo đơn vị kỹ thuật PV EU) khi chạy chế độ Tự động (Auto)), cho phép mở ô nhập số trên HMI Faceplate |
+| **`ORdy_SPRampStart`** | `BOOL` | `0` | [Cờ cho phép sáng nút nhấn trên HMI] 1 = Sẵn sàng nhận lệnh OCmd_SPRampStart (Bắt đầu chạy quy trình thay đổi giá trị đặt SP theo độ dốc (Start Setpoint Ramping)), cho phép sáng nút nhấn tương ứng trên HMI Faceplate |
+| **`ORdy_SPRampStop`** | `BOOL` | `0` | [Cờ cho phép sáng nút nhấn trên HMI] 1 = Sẵn sàng nhận lệnh OCmd_SPRampStop (Dừng quy trình thay đổi giá trị đặt SP theo độ dốc (Stop Setpoint Ramping)), cho phép sáng nút nhấn tương ứng trên HMI Faceplate |
+| **`ORdy_SPRampT`** | `BOOL` | `0` | [Cờ cho phép nhập dữ liệu trên HMI] 1 = Sẵn sàng nhận giá trị đặt OSet_SPRampT (Thời gian tăng/giảm giá trị đặt SP đến đích (Setpoint Ramp Time, hợp lệ từ 0.0 đến 28800.0 giây)), cho phép mở ô nhập số trên HMI Faceplate |
+| **`ORdy_SPRoCLimDec`** | `BOOL` | `0` | [Cờ cho phép nhập dữ liệu trên HMI] 1 = Sẵn sàng nhận giá trị đặt OSet_SPRoCLimDec (Giới hạn tốc độ giảm tối đa của giá trị đặt SP (Negative Rate-of-Change Limit, đơn vị PVEU/giây)), cho phép mở ô nhập số trên HMI Faceplate |
+| **`ORdy_SPRoCLimInc`** | `BOOL` | `0` | [Cờ cho phép nhập dữ liệu trên HMI] 1 = Sẵn sàng nhận giá trị đặt OSet_SPRoCLimInc (Giới hạn tốc độ tăng tối đa của giá trị đặt SP (Positive Rate-of-Change Limit, đơn vị PVEU/giây)), cho phép mở ô nhập số trên HMI Faceplate |
+| **`ORdy_SPTarget`** | `BOOL` | `0` | [Cờ cho phép nhập dữ liệu trên HMI] 1 = Sẵn sàng nhận giá trị đặt OSet_SPTarget (Giá trị đích cuối cùng của quá trình tăng/giảm SP theo độ dốc (Setpoint Ramp Target, đơn vị PVEU)), cho phép mở ô nhập số trên HMI Faceplate |
+| **`OSet_CV`** | `REAL` | `0` | [Giá trị đặt từ Người vận hành HMI] Giá trị đặt từ Người vận hành (Operator HMI): Giá trị biến điều khiển đầu ra (Controlled Variable - CV, tính theo đơn vị kỹ thuật EU) |
+| **`OSet_Ratio`** | `REAL` | `1` | [Giá trị đặt từ Người vận hành HMI] Giá trị đặt từ Người vận hành (Operator HMI): Hệ số tỷ lệ (Ratio, không thứ nguyên) khi vòng điều khiển chạy ở chế độ Cascade/Ratio |
+| **`OSet_SP`** | `REAL` | `0` | [Giá trị đặt từ Người vận hành HMI] Giá trị đặt từ Người vận hành (Operator HMI): Giá trị đặt chính (Setpoint - SP, tính theo đơn vị kỹ thuật PV EU) khi chạy chế độ Tự động (Auto) |
+| **`OSet_SPRampT`** | `REAL` | `0` | [Giá trị đặt từ Người vận hành HMI] Giá trị đặt từ Người vận hành (Operator HMI): Thời gian tăng/giảm giá trị đặt SP đến đích (Setpoint Ramp Time, hợp lệ từ 0.0 đến 28800.0 giây) |
+| **`OSet_SPRoCLimDec`** | `REAL` | `0` | [Giá trị đặt từ Người vận hành HMI] Giá trị đặt từ Người vận hành (Operator HMI): Giới hạn tốc độ giảm tối đa của giá trị đặt SP (Negative Rate-of-Change Limit, đơn vị PVEU/giây) |
+| **`OSet_SPRoCLimInc`** | `REAL` | `0` | [Giá trị đặt từ Người vận hành HMI] Giá trị đặt từ Người vận hành (Operator HMI): Giới hạn tốc độ tăng tối đa của giá trị đặt SP (Positive Rate-of-Change Limit, đơn vị PVEU/giây) |
+| **`OSet_SPTarget`** | `REAL` | `0` | [Giá trị đặt từ Người vận hành HMI] Giá trị đặt từ Người vận hành (Operator HMI): Giá trị đích cuối cùng của quá trình tăng/giảm SP theo độ dốc (Setpoint Ramp Target, đơn vị PVEU) |
+| **`Val_Notify`** | `DINT` | `0` | [Giá trị thực tế đầu ra (Logic/HMI)] Mã mức độ ưu tiên cảnh báo hiện hành và trạng thái xác nhận của khối này (0 = Không có cảnh báo, 1 = Đã hết lỗi nhưng chờ Reset/Ack, 2..3 = Thấp, 4..5 = Trung bình, 6..7 = Cao, 8..9 = Khẩn cấp) |
